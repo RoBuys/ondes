@@ -40,7 +40,11 @@ function attemptsFor(urls: string[], live: boolean): Attempt[] {
 interface State {
   loading: boolean;
   error?: string;
+  /** Numéro de la tentative de reconnexion en cours */
+  reconnecting?: number;
 }
+
+const MAX_RECONNECTS = 8;
 
 export function Player({
   spec,
@@ -60,7 +64,7 @@ export function Player({
   const hideTimer = useRef<number>(undefined);
   const urlsKey = spec.urls.join('|');
 
-  /* Moteur de lecture */
+  /* Moteur de lecture, avec reconnexion automatique */
   useEffect(() => {
     const v = videoRef.current!;
     const attempts = attemptsFor(spec.urls, spec.live);
@@ -69,6 +73,13 @@ export function Player({
     let destroy: (() => void) | null = null;
     let engine: Engine | null = null;
     let timer: number | undefined;
+    let retryTimer: number | undefined;
+    let hadPlayed = false;
+    let working = 0;
+    let reconnects = 0;
+    let resumeAt = 0;
+    let lastT = -1;
+    let frozenFor = 0;
 
     const teardown = () => {
       window.clearTimeout(timer);
@@ -90,22 +101,33 @@ export function Player({
       }
     };
 
-    const fail = (t: number, why: string) => {
-      if (disposed || t !== token) return;
-      teardown();
-      if (t + 1 < attempts.length) run(t + 1);
-      else {
-        token = -1;
-        setState({ loading: false, error: why });
-      }
+    const scheduleReconnect = (): void => {
+      reconnects++;
+      token = -2;
+      const delay = Math.min(1000 * 2 ** (reconnects - 1), 15000);
+      setState({ loading: true, reconnecting: reconnects });
+      retryTimer = window.setTimeout(() => !disposed && run(working), delay);
     };
 
-    const run = (i: number) => {
+    const fail = (t: number, why: string): void => {
+      if (disposed || t !== token) return;
+      if (hadPlayed && !spec.live && v.currentTime > 1) resumeAt = v.currentTime;
+      teardown();
+      // Coupure en cours de lecture : on relance la source qui fonctionnait, avec un délai croissant.
+      if (hadPlayed && reconnects < MAX_RECONNECTS) return scheduleReconnect();
+      if (!hadPlayed && t + 1 < attempts.length) return run(t + 1);
+      token = -1;
+      setState({ loading: false, error: hadPlayed ? `Connexion perdue (${why})` : why });
+    };
+
+    const run = (i: number): void => {
       token = i;
       const t = i;
       const a = attempts[i];
       engine = a.engine;
-      setState({ loading: true });
+      lastT = -1;
+      frozenFor = 0;
+      setState((s) => (s.reconnecting ? s : { loading: true }));
       timer = window.setTimeout(() => fail(t, 'Le flux ne répond pas (délai dépassé)'), spec.live ? 15000 : 25000);
       try {
         if (a.engine === 'hls') {
@@ -115,7 +137,9 @@ export function Player({
               maxBufferLength: spec.live ? 20 : 60,
               manifestLoadingTimeOut: 8000,
               manifestLoadingMaxRetry: 1,
-              levelLoadingMaxRetry: 2,
+              levelLoadingMaxRetry: 3,
+              fragLoadingMaxRetry: 4,
+              startPosition: resumeAt > 0 ? resumeAt : -1,
             });
             let recovered = false;
             hls.on(Hls.Events.ERROR, (_e, d) => {
@@ -165,13 +189,24 @@ export function Player({
 
     const onPlaying = () => {
       window.clearTimeout(timer);
+      if (token >= 0) {
+        hadPlayed = true;
+        working = token;
+        reconnects = 0;
+      }
       setState({ loading: false });
     };
     const onCanPlay = () => {
       window.clearTimeout(timer);
-      setState((s) => (s.error ? s : { loading: false }));
+      setState((s) => (s.error || s.reconnecting ? s : { loading: false }));
     };
-    const onWaiting = () => setState((s) => (s.error ? s : { loading: true }));
+    const onMeta = () => {
+      if (resumeAt > 0 && engine !== 'hls') {
+        v.currentTime = resumeAt;
+      }
+      resumeAt = 0;
+    };
+    const onWaiting = () => setState((s) => (s.error || s.reconnecting ? s : { loading: true }));
     const onError = () => {
       if (engine === 'hls' || token < 0) return;
       const err = v.error;
@@ -179,19 +214,45 @@ export function Player({
       fail(token, `Format non pris en charge (code ${err.code})`);
     };
 
+    // Détection de flux figé : l'image ne progresse plus alors que la lecture est en cours.
+    const watchdog = window.setInterval(() => {
+      if (token < 0 || !hadPlayed || v.paused || v.ended) {
+        frozenFor = 0;
+        return;
+      }
+      if (v.currentTime === lastT) frozenFor += 2;
+      else frozenFor = 0;
+      lastT = v.currentTime;
+      if (frozenFor >= (spec.live ? 12 : 20)) fail(token, 'flux figé');
+    }, 2000);
+
+    // Retour du réseau : on n'attend pas la fin du délai.
+    const onOnline = () => {
+      if (token === -2) {
+        window.clearTimeout(retryTimer);
+        run(working);
+      }
+    };
+
     v.addEventListener('playing', onPlaying);
     v.addEventListener('canplay', onCanPlay);
+    v.addEventListener('loadedmetadata', onMeta);
     v.addEventListener('waiting', onWaiting);
     v.addEventListener('error', onError);
+    window.addEventListener('online', onOnline);
     if (attempts.length) run(0);
     else setState({ loading: false, error: 'Aucune adresse de flux' });
 
     return () => {
       disposed = true;
+      window.clearInterval(watchdog);
+      window.clearTimeout(retryTimer);
       v.removeEventListener('playing', onPlaying);
       v.removeEventListener('canplay', onCanPlay);
+      v.removeEventListener('loadedmetadata', onMeta);
       v.removeEventListener('waiting', onWaiting);
       v.removeEventListener('error', onError);
+      window.removeEventListener('online', onOnline);
       teardown();
     };
     // eslint-disable-next-line react-hooks/exhaustive-deps
@@ -307,6 +368,11 @@ export function Player({
       {state.loading && !state.error && (
         <div className="player-msg">
           <span className="spinner" />
+          {state.reconnecting && (
+            <span className="player-reconnect">
+              Connexion perdue — reconnexion ({state.reconnecting}/{MAX_RECONNECTS})…
+            </span>
+          )}
         </div>
       )}
       {state.error && (

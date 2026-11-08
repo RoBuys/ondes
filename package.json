@@ -10,6 +10,7 @@
     "tauri": "tauri"
   },
   "dependencies": {
+    "@tauri-apps/api": "^2.12.4",
     "hls.js": "^1.7.4",
     "idb-keyval": "^6.2.1",
     "mpegts.js": "^1.8.2",

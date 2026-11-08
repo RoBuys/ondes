@@ -24,12 +24,22 @@
       }
     ],
     "security": {
-      "csp": null
+      "csp": null,
+      "assetProtocol": {
+        "enable": true,
+        "scope": [
+          "$VIDEO/Ondes/**",
+          "$DOWNLOAD/Ondes/**"
+        ]
+      }
     }
   },
   "bundle": {
     "active": true,
-    "targets": ["nsis", "msi"],
+    "targets": [
+      "nsis",
+      "msi"
+    ],
     "category": "Video",
     "shortDescription": "Lecteur IPTV",
     "longDescription": "Ondes lit vos playlists IPTV (M3U, Xtream Codes) avec guide des programmes, films et séries.",
@@ -41,9 +51,19 @@
       "icons/icon.ico"
     ],
     "windows": {
-      "webviewInstallMode": { "type": "downloadBootstrapper" },
-      "nsis": { "languages": ["French", "English"], "displayLanguageSelector": false },
-      "wix": { "language": "fr-FR" }
+      "webviewInstallMode": {
+        "type": "downloadBootstrapper"
+      },
+      "nsis": {
+        "languages": [
+          "French",
+          "English"
+        ],
+        "displayLanguageSelector": false
+      },
+      "wix": {
+        "language": "fr-FR"
+      }
     }
   }
 }

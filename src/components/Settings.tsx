@@ -135,7 +135,7 @@ export function AddSourceForm({ onDone, onCancel }: { onDone?: () => void; onCan
 }
 
 function SourceCard({ s }: { s: Source }) {
-  const { active, setActiveId, refresh, refreshEpg, removeSource, updateSource, catalog } = useApp();
+  const { active, setActiveId, refresh, refreshEpg, removeSource, updateSource, rawCatalog: catalog, organize } = useApp();
   const [confirm, setConfirm] = useState(false);
   const [editing, setEditing] = useState(false);
   const [name, setName] = useState(s.name);
@@ -174,6 +174,11 @@ function SourceCard({ s }: { s: Source }) {
           {isActive && (
             <button className="icon-btn" onClick={refresh} title="Actualiser la playlist">
               <Icon name="refresh" size={18} />
+            </button>
+          )}
+          {isActive && (
+            <button className="btn ghost" onClick={() => organize()}>
+              Organiser
             </button>
           )}
           <button className="btn ghost" onClick={() => setEditing((v) => !v)}>

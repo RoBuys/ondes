@@ -7,6 +7,13 @@ Application de bureau (Tauri 2 + React) pour regarder vos sources IPTV :
 - **Guide** : grille XMLTV sur 12 h (navigation par tranches de 3 h), détectée depuis la playlist (`x-tvg-url`) ou Xtream, ou saisie à la main. Les `.xml.gz` sont gérés.
 - **Films & séries** : catalogues Xtream (fiches détaillées, saisons, épisodes) ou VOD des M3U, reprise de lecture, épisode suivant automatique.
 - **Lecture** : HLS (hls.js), MPEG-TS (mpegts.js) et MP4 natif, avec bascule automatique d'un format à l'autre en cas d'échec.
+- **Reconnexion intelligente** : en cas de coupure ou d'image figée, le flux est relancé automatiquement (jusqu'à 8 essais,
+  délai croissant, reprise immédiate au retour du réseau) ; les films reprennent à la même position.
+- **Recherche globale** : la barre du haut cherche chaînes, films et séries dans toutes les sources à la fois.
+- **Organiser** : masquer, renommer, réordonner (glisser-déposer) les groupes ; deux groupes renommés pareil fusionnent.
+  Clic droit sur une chaîne, un film ou une série pour la renommer ou la masquer.
+- **Téléchargements** (app Windows) : films, épisodes ou saison entière dans `Vidéos\Ondes`, un à la fois pour respecter
+  la limite de connexions de l'abonnement, avec pause, reprise (même après redémarrage) et lecture hors connexion.
 
 Ondes ne fournit aucune chaîne : utilisez uniquement des sources auxquelles vous avez légalement accès.
 

@@ -1,11 +1,16 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { GuideView } from './components/Guide';
 import { LiveView } from './components/Live';
+import { DownloadsView } from './components/Downloads';
+import { ItemModal, OrganizeModal, type ItemTarget } from './components/Organize';
 import { Player } from './components/Player';
+import { SearchView } from './components/Search';
 import { AddSourceForm, DEMO_SOURCE, SettingsView } from './components/Settings';
-import { Icon, Logo } from './components/ui';
+import { Icon, Logo, SearchBox } from './components/ui';
 import { MoviesView, SeriesView } from './components/Vod';
-import { Ctx, useApp, type AppCtx, type EpgStatus, type Status, type View } from './context';
+import { Ctx, useApp, type AppCtx, type EpgStatus, type PendingOpen, type Status, type View } from './context';
+import { applyRules, loadRules, saveRules, type ContentRules, type Kind } from './lib/content';
+import { downloadsAvailable, useDownloads } from './lib/downloads';
 import { epgUrlFor, loadCatalog, loadEpg } from './lib/catalog';
 import { db, prefs } from './lib/store';
 import type { Catalog, Epg, PlaySpec, Settings, Source } from './lib/types';
@@ -33,6 +38,13 @@ export default function App() {
   const [view, setView] = useState<View>(() => prefs.get<View>('view', 'live'));
   const [liveSel, setLiveSelState] = useState<string | null>(() => prefs.get<string | null>('liveSel', null));
   const [overlay, setOverlay] = useState<PlaySpec | null>(null);
+  const [rules, setRulesState] = useState<ContentRules>(() => loadRules(activeId ?? ''));
+  const [organizeKind, setOrganizeKind] = useState<Kind | null>(null);
+  const [itemTarget, setItemTarget] = useState<ItemTarget | null>(null);
+  const [pendingOpen, setPendingOpen] = useState<PendingOpen | null>(null);
+  const [globalQ, setGlobalQ] = useState('');
+  const prevView = useRef<View>('live');
+  const downloads = useDownloads();
 
   const active = useMemo(() => sources.find((s) => s.id === activeId) ?? null, [sources, activeId]);
   const activeRef = useRef(active);
@@ -42,7 +54,26 @@ export default function App() {
   const loadSeq = useRef(0);
   const epgSeq = useRef(0);
 
-  useEffect(() => prefs.set('view', view), [view]);
+  useEffect(() => {
+    if (view !== 'search') prefs.set('view', view);
+  }, [view]);
+
+  useEffect(() => setRulesState(loadRules(active?.id ?? '')), [active?.id]);
+  const setRules = useCallback((r: ContentRules) => {
+    const id = activeRef.current?.id;
+    if (!id) return;
+    saveRules(id, r);
+    setRulesState(r);
+  }, []);
+  const viewCatalog = useMemo(() => (catalog ? applyRules(catalog, rules) : null), [catalog, rules]);
+
+  const onGlobalSearch = (q: string) => {
+    setGlobalQ(q);
+    if (q && view !== 'search') {
+      prevView.current = view;
+      setView('search');
+    } else if (!q && view === 'search') setView(prevView.current);
+  };
 
   const setActiveId = useCallback((id: string) => {
     setActiveIdState(id);
@@ -210,7 +241,17 @@ export default function App() {
     addSource,
     updateSource,
     removeSource,
-    catalog,
+    catalog: viewCatalog,
+    rawCatalog: catalog,
+    rules,
+    setRules,
+    organize: (k?: Kind) => setOrganizeKind(k ?? 'l'),
+    editItem: (id: string, label: string) => {
+      const find = (c: Catalog | null) => c && [...c.live, ...c.movies, ...c.series].find((x) => x.id === id);
+      const shown = find(viewCatalog);
+      const orig = find(catalog);
+      if (shown && orig) setItemTarget({ id, label, name: shown.name, original: orig.name });
+    },
     status,
     refresh,
     epg,
@@ -224,6 +265,9 @@ export default function App() {
     setView,
     liveSel,
     setLiveSel,
+    pendingOpen,
+    setPendingOpen,
+    downloads,
     overlay,
     play: setOverlay,
     clearCaches,
@@ -250,6 +294,13 @@ export default function App() {
               <span>{n.label}</span>
             </button>
           ))}
+          {downloadsAvailable && (
+            <button className={cx('rail-btn', view === 'downloads' && 'on')} onClick={() => setView('downloads')}>
+              <Icon name="download" size={22} />
+              <span>Téléchargés</span>
+              {Object.values(downloads.items).some((d) => d.status === 'downloading') && <i className="rail-dot" />}
+            </button>
+          )}
           <div className="rail-spacer" />
           <button className={cx('rail-btn', view === 'settings' && 'on')} onClick={() => setView('settings')}>
             <Icon name="sliders" size={22} />
@@ -266,12 +317,15 @@ export default function App() {
                 </option>
               ))}
             </select>
-            {catalog && (
+            {viewCatalog && (
               <span className="muted small counts">
-                {fmtCount(catalog.live.length)} chaînes · {fmtCount(catalog.movies.length)} films · {fmtCount(catalog.series.length)} séries
+                {fmtCount(viewCatalog.live.length)} chaînes · {fmtCount(viewCatalog.movies.length)} films · {fmtCount(viewCatalog.series.length)} séries
               </span>
             )}
             <div className="topbar-spacer" />
+            <div className="global-search">
+              <SearchBox value={globalQ} onChange={onGlobalSearch} placeholder="Rechercher dans toutes les sources" />
+            </div>
             {status.loading && (
               <span className="status">
                 <span className="spinner small" /> {status.message}
@@ -295,6 +349,10 @@ export default function App() {
           <section className="content">
             {view === 'settings' ? (
               <SettingsView />
+            ) : view === 'search' ? (
+              <SearchView query={globalQ} onDone={() => setGlobalQ('')} />
+            ) : view === 'downloads' ? (
+              <DownloadsView />
             ) : !catalog ? (
               <div className="center-msg">
                 {status.error ? (
@@ -328,6 +386,8 @@ export default function App() {
           </section>
         </main>
 
+        {organizeKind && <OrganizeModal initialKind={organizeKind} onClose={() => setOrganizeKind(null)} />}
+        {itemTarget && <ItemModal target={itemTarget} onClose={() => setItemTarget(null)} />}
         {overlay && (
           <div className="overlay">
             <Player spec={overlay} mode="overlay" onClose={closeOverlay} />

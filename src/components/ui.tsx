@@ -81,6 +81,25 @@ const PATHS: Record<string, ReactNode> = {
     </>
   ),
   check: <path d="M5 12.5l4.5 4.5L19 7.5" />,
+  up: <path d="M6 15l6-6 6 6" />,
+  down: <path d="M6 9l6 6 6-6" />,
+  top: <path d="M6 18l6-6 6 6M6 6h12" />,
+  eyeoff: (
+    <>
+      <path d="M3 3l18 18" />
+      <path d="M10.6 5.1A10 10 0 0 1 12 5c5 0 8.5 4.5 9.5 7a13 13 0 0 1-2.6 3.7M6.6 6.6C4.4 8 3 10.2 2.5 12c1 2.5 4.5 7 9.5 7a9.7 9.7 0 0 0 5.4-1.6" />
+      <path d="M9.9 9.9a3 3 0 0 0 4.2 4.2" />
+    </>
+  ),
+  download: <path d="M12 4v11M7 10.5l5 5 5-5M5 20h14" />,
+  folder: <path d="M3.5 7.5A2 2 0 0 1 5.5 5.5h4l2 2.5h7a2 2 0 0 1 2 2v7.5a2 2 0 0 1-2 2h-13a2 2 0 0 1-2-2z" />,
+  pause: <path d="M8.5 5v14M15.5 5v14" />,
+  globe: (
+    <>
+      <circle cx="12" cy="12" r="8.5" />
+      <path d="M3.5 12h17M12 3.5c2.5 2.5 3.5 5.5 3.5 8.5s-1 6-3.5 8.5c-2.5-2.5-3.5-5.5-3.5-8.5s1-6 3.5-8.5z" />
+    </>
+  ),
 };
 
 export function Icon({ name, size = 20, filled = false }: { name: keyof typeof PATHS | string; size?: number; filled?: boolean }) {
@@ -253,9 +272,25 @@ export interface GroupItem {
   icon?: string;
 }
 
-export function GroupList({ groups, value, onChange }: { groups: GroupItem[]; value: string; onChange: (id: string) => void }) {
+export function GroupList({
+  groups,
+  value,
+  onChange,
+  onManage,
+}: {
+  groups: GroupItem[];
+  value: string;
+  onChange: (id: string) => void;
+  onManage?: () => void;
+}) {
   return (
     <div className="groups">
+      {onManage && (
+        <button className="group manage" onClick={onManage} title="Masquer, renommer, réordonner les groupes">
+          <Icon name="sliders" size={15} />
+          <span className="group-label">Organiser</span>
+        </button>
+      )}
       {groups.map((g) => (
         <button key={g.id} className={cx('group', g.id === value && 'on')} onClick={() => onChange(g.id)} title={g.label}>
           {g.icon && <Icon name={g.icon} size={15} filled={g.icon === 'star'} />}

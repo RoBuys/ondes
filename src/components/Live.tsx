@@ -29,7 +29,7 @@ export function useLiveGroups(live: Channel[], favs: Set<string>): GroupItem[] {
 }
 
 export function LiveView() {
-  const { catalog, epg, favs, toggleFav, liveSel, setLiveSel, overlay, settings, active } = useApp();
+  const { catalog, epg, favs, toggleFav, liveSel, setLiveSel, overlay, settings, active, organize, editItem } = useApp();
   const live = catalog?.live ?? [];
   const groupKey = `liveGroup.${active?.id}`;
   const [group, setGroupState] = useState<string>(() => prefs.get(groupKey, ALL));
@@ -87,7 +87,7 @@ export function LiveView() {
 
   return (
     <div className="live">
-      <GroupList groups={groups} value={q ? '' : group} onChange={setGroup} />
+      <GroupList groups={groups} value={q ? '' : group} onChange={setGroup} onManage={() => organize('l')} />
 
       <div className="channels">
         <div className="pane-head">
@@ -108,7 +108,14 @@ export function LiveView() {
               const c = nowAndNext(p, now).cur;
               const on = favs.has(ch.id);
               return (
-                <div className={cx('ch-row', ch.id === liveSel && 'on')} onClick={() => setLiveSel(ch.id)}>
+                <div
+                  className={cx('ch-row', ch.id === liveSel && 'on')}
+                  onClick={() => setLiveSel(ch.id)}
+                  onContextMenu={(e) => {
+                    e.preventDefault();
+                    editItem(ch.id, `Chaîne · ${ch.group}`);
+                  }}
+                >
                   <span className="ch-num">{ch.num ?? i + 1}</span>
                   <Img className="ch-logo" src={ch.logo} alt={ch.name} />
                   <div className="ch-text">

@@ -1,9 +1,11 @@
 import { useEffect, useMemo, useState } from 'react';
 import { useApp } from '../context';
+import { downloadsAvailable, localSrc } from '../lib/downloads';
 import { getPosition, getPositions } from '../lib/store';
 import type { Episode, Movie, Show } from '../lib/types';
 import { cx, errMsg, makeSearch } from '../lib/util';
 import { xtSeriesInfo, xtVodInfo, type ExtraInfo } from '../lib/xtream';
+import { DownloadButton } from './Downloads';
 import { Empty, GroupList, Icon, Img, Modal, SearchBox, copyText, type GroupItem } from './ui';
 
 const FAV = '__fav';
@@ -42,7 +44,7 @@ function Browser<T extends Item>({
   contIds: Set<string> | null;
   onOpen: (it: T) => void;
 }) {
-  const { favs } = useApp();
+  const { favs, organize } = useApp();
   const groups = useGroups(items, favs, contIds);
   const [group, setGroup] = useState(ALL);
   const [q, setQ] = useState('');
@@ -69,7 +71,12 @@ function Browser<T extends Item>({
 
   return (
     <div className="vod">
-      <GroupList groups={groups} value={q ? '' : group} onChange={(g) => (setGroup(g), setQ(''))} />
+      <GroupList
+        groups={groups}
+        value={q ? '' : group}
+        onChange={(g) => (setGroup(g), setQ(''))}
+        onManage={() => organize(kind === 'movies' ? 'm' : 's')}
+      />
       <div className="vod-main">
         <div className="pane-head">
           <SearchBox value={q} onChange={setQ} placeholder={kind === 'movies' ? 'Rechercher un film' : 'Rechercher une série'} />
@@ -88,7 +95,7 @@ function Browser<T extends Item>({
           ) : (
             <div className="poster-grid">
               {list.slice(0, limit).map((m) => (
-                <PosterCard key={m.id} item={m} onOpen={() => onOpen(m)} />
+                <PosterCard key={m.id} item={m} label={kind === 'movies' ? 'Film' : 'Série'} onOpen={() => onOpen(m)} />
               ))}
             </div>
           )}
@@ -98,11 +105,18 @@ function Browser<T extends Item>({
   );
 }
 
-function PosterCard({ item, onOpen }: { item: Item; onOpen: () => void }) {
-  const { favs } = useApp();
+function PosterCard({ item, onOpen, label }: { item: Item; onOpen: () => void; label: string }) {
+  const { favs, editItem } = useApp();
   const pos = getPosition(item.id);
   return (
-    <button className="poster" onClick={onOpen}>
+    <button
+      className="poster"
+      onClick={onOpen}
+      onContextMenu={(e) => {
+        e.preventDefault();
+        editItem(item.id, `${label} · ${item.group}`);
+      }}
+    >
       <div className="poster-img">
         <Img src={item.poster} alt={item.name} />
         {favs.has(item.id) && (
@@ -126,8 +140,14 @@ function PosterCard({ item, onOpen }: { item: Item; onOpen: () => void }) {
 /* ---------------- Films ---------------- */
 
 export function MoviesView() {
-  const { catalog } = useApp();
+  const { catalog, pendingOpen, setPendingOpen } = useApp();
   const [open, setOpen] = useState<Movie | null>(null);
+  useEffect(() => {
+    if (!catalog || pendingOpen?.kind !== 'movie' || catalog.sourceId !== pendingOpen.sourceId) return;
+    const m = catalog.movies.find((x) => x.id === pendingOpen.id);
+    if (m) setOpen(m);
+    setPendingOpen(null);
+  }, [catalog, pendingOpen, setPendingOpen]);
   const contIds = useMemo(() => new Set(Object.keys(getPositions())), [open]); // eslint-disable-line react-hooks/exhaustive-deps
   if (!catalog) return null;
   return (
@@ -139,10 +159,11 @@ export function MoviesView() {
 }
 
 function MovieDetail({ movie, onClose }: { movie: Movie; onClose: () => void }) {
-  const { active, play, favs, toggleFav, overlay } = useApp();
+  const { active, play, favs, toggleFav, overlay, downloads } = useApp();
   const [info, setInfo] = useState<ExtraInfo | null>(null);
   const [err, setErr] = useState<string | null>(null);
   const [copied, setCopied] = useState(false);
+  const local = downloads.items[movie.id] ? localSrc(downloads.items[movie.id]) : undefined;
 
   useEffect(() => {
     if (!active || active.kind !== 'xtream' || !movie.vodId) return;
@@ -157,7 +178,15 @@ function MovieDetail({ movie, onClose }: { movie: Movie; onClose: () => void }) 
 
   const pos = overlay ? undefined : getPosition(movie.id);
   const start = () =>
-    play({ key: movie.id, title: movie.name, subtitle: movie.year, urls: [movie.url], live: false, resumeKey: movie.id, poster: info?.backdrop });
+    play({
+      key: movie.id,
+      title: movie.name,
+      subtitle: local ? `${movie.year ?? ''} · fichier téléchargé`.replace(/^ · /, '') : movie.year,
+      urls: local ? [local, movie.url] : [movie.url],
+      live: false,
+      resumeKey: movie.id,
+      poster: info?.backdrop,
+    });
 
   const meta = [movie.year, info?.genre, info?.duration, (info?.rating || movie.rating) && `★ ${info?.rating || movie.rating}`].filter(Boolean);
 
@@ -177,6 +206,22 @@ function MovieDetail({ movie, onClose }: { movie: Movie; onClose: () => void }) 
             <button className={cx('btn ghost', favs.has(movie.id) && 'active')} onClick={() => toggleFav(movie.id)}>
               <Icon name="star" size={16} filled={favs.has(movie.id)} /> {favs.has(movie.id) ? 'Favori' : 'Favoris'}
             </button>
+            <DownloadButton
+              id={movie.id}
+              onStart={() =>
+                active &&
+                downloads.add({
+                  id: movie.id,
+                  sourceId: active.id,
+                  kind: 'movie',
+                  title: movie.name,
+                  subtitle: [movie.year, info?.genre].filter(Boolean).join(' · ') || undefined,
+                  poster: movie.poster,
+                  url: movie.url,
+                  baseName: movie.name,
+                })
+              }
+            />
             <button
               className="btn ghost"
               onClick={async () => {
@@ -218,8 +263,14 @@ function MovieDetail({ movie, onClose }: { movie: Movie; onClose: () => void }) 
 /* ---------------- Séries ---------------- */
 
 export function SeriesView() {
-  const { catalog } = useApp();
+  const { catalog, pendingOpen, setPendingOpen } = useApp();
   const [open, setOpen] = useState<Show | null>(null);
+  useEffect(() => {
+    if (!catalog || pendingOpen?.kind !== 'show' || catalog.sourceId !== pendingOpen.sourceId) return;
+    const s = catalog.series.find((x) => x.id === pendingOpen.id);
+    if (s) setOpen(s);
+    setPendingOpen(null);
+  }, [catalog, pendingOpen, setPendingOpen]);
   if (!catalog) return null;
   return (
     <>
@@ -230,7 +281,7 @@ export function SeriesView() {
 }
 
 function ShowDetail({ show, onClose }: { show: Show; onClose: () => void }) {
-  const { active, play, favs, toggleFav, overlay } = useApp();
+  const { active, play, favs, toggleFav, overlay, downloads } = useApp();
   const [episodes, setEpisodes] = useState<Episode[] | null>(show.episodes ?? null);
   const [info, setInfo] = useState<ExtraInfo | null>(null);
   const [err, setErr] = useState<string | null>(null);
@@ -268,15 +319,33 @@ function ShowDetail({ show, onClose }: { show: Show; onClose: () => void }) {
     const all = episodes ?? [];
     const i = all.indexOf(ep);
     const next = all[i + 1];
+    const dl = downloads.items[ep.id];
+    const local = dl ? localSrc(dl) : undefined;
     play({
       key: ep.id,
       title: show.name,
       subtitle: `S${ep.season} · É${ep.episode} — ${ep.title}`,
-      urls: [ep.url],
+      urls: local ? [local, ep.url] : [ep.url],
       live: false,
       resumeKey: ep.id,
       poster: ep.image || info?.backdrop,
       onEnded: next ? () => playEp(next) : undefined,
+    });
+  };
+
+  const downloadEp = (ep: Episode) => {
+    if (!active) return;
+    const code = `S${String(ep.season).padStart(2, '0')}E${String(ep.episode).padStart(2, '0')}`;
+    const sameAsShow = ep.title.toLowerCase().startsWith(show.name.toLowerCase());
+    downloads.add({
+      id: ep.id,
+      sourceId: active.id,
+      kind: 'episode',
+      title: show.name,
+      subtitle: `S${ep.season} · É${ep.episode} — ${ep.title}`,
+      poster: ep.image || show.poster,
+      url: ep.url,
+      baseName: sameAsShow ? ep.title : `${show.name} - ${code} - ${ep.title}`,
     });
   };
 
@@ -321,6 +390,12 @@ function ShowDetail({ show, onClose }: { show: Show; onClose: () => void }) {
           </div>
         )}
         {episodes && episodes.length === 0 && <div className="pane-empty">Aucun épisode disponible.</div>}
+        {list.length > 0 && (
+          <div className="season-bar">
+            {seasons.length > 1 ? null : <span className="muted small">{list.length} épisodes</span>}
+            <DownloadSeason episodes={list} season={current} onDownload={downloadEp} />
+          </div>
+        )}
         {seasons.length > 1 && (
           <div className="seasons">
             {seasons.map((s) => (
@@ -333,7 +408,14 @@ function ShowDetail({ show, onClose }: { show: Show; onClose: () => void }) {
         {list.map((ep) => {
           const p = positions[ep.id];
           return (
-            <button key={ep.id} className="ep" onClick={() => playEp(ep)}>
+            <div
+              key={ep.id}
+              className="ep"
+              role="button"
+              tabIndex={0}
+              onClick={() => playEp(ep)}
+              onKeyDown={(e) => e.key === 'Enter' && playEp(ep)}
+            >
               <div className="ep-img">
                 <Img src={ep.image || show.poster} alt={ep.title} />
                 <span className="ep-play">
@@ -352,10 +434,23 @@ function ShowDetail({ show, onClose }: { show: Show; onClose: () => void }) {
                 {ep.duration && <div className="muted small">{ep.duration}</div>}
                 {ep.plot && <div className="ep-plot">{ep.plot}</div>}
               </div>
-            </button>
+              <DownloadButton id={ep.id} compact onStart={() => downloadEp(ep)} />
+            </div>
           );
         })}
       </div>
     </Modal>
+  );
+}
+
+function DownloadSeason({ episodes, season, onDownload }: { episodes: Episode[]; season: number; onDownload: (e: Episode) => void }) {
+  const { downloads } = useApp();
+  if (!downloadsAvailable) return null;
+  const todo = episodes.filter((e) => !downloads.items[e.id] || downloads.items[e.id].status === 'error');
+  if (!todo.length) return <span className="muted small">Saison {season} entièrement téléchargée ou en file d’attente</span>;
+  return (
+    <button className="btn ghost" onClick={() => todo.forEach(onDownload)}>
+      <Icon name="download" size={16} /> Télécharger la saison {season} ({todo.length})
+    </button>
   );
 }
