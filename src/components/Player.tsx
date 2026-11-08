@@ -1,7 +1,7 @@
 import Hls from 'hls.js';
 import mpegts from 'mpegts.js';
 import { useCallback, useEffect, useRef, useState } from 'react';
-import { proxied } from '../lib/net';
+import { mediaSrc, proxied } from '../lib/net';
 import { clearPosition, getPosition, prefs, setPosition } from '../lib/store';
 import type { PlaySpec } from '../lib/types';
 import { cx } from '../lib/util';
@@ -155,7 +155,7 @@ export function Player({
             hls.attachMedia(v);
             destroy = () => hls.destroy();
           } else {
-            v.src = a.url;
+            v.src = mediaSrc(a.url);
           }
         } else if (a.engine === 'ts') {
           if (!mpegts.isSupported()) return fail(t, 'MPEG-TS non pris en charge');
@@ -179,7 +179,7 @@ export function Player({
             p.destroy();
           };
         } else {
-          v.src = a.url;
+          v.src = mediaSrc(a.url);
         }
         v.play().catch(() => {});
       } catch (e) {
@@ -348,7 +348,7 @@ export function Player({
 
   return (
     <div ref={wrap} className={cx('player', mode, !chrome && 'idle')} onMouseMove={poke}>
-      <video ref={videoRef} controls autoPlay playsInline poster={spec.poster} />
+      <video ref={videoRef} controls autoPlay playsInline poster={spec.poster ? mediaSrc(spec.poster) : undefined} />
       {mode === 'overlay' && (
         <div className="player-top">
           <button className="icon-btn" onClick={onClose} aria-label="Retour">

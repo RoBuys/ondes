@@ -36,10 +36,7 @@
   },
   "bundle": {
     "active": true,
-    "targets": [
-      "nsis",
-      "msi"
-    ],
+    "targets": "all",
     "category": "Video",
     "shortDescription": "Lecteur IPTV",
     "longDescription": "Ondes lit vos playlists IPTV (M3U, Xtream Codes) avec guide des programmes, films et séries.",
@@ -64,6 +61,10 @@
       "wix": {
         "language": "fr-FR"
       }
+    },
+    "macOS": {
+      "signingIdentity": "-",
+      "minimumSystemVersion": "11.0"
     }
   }
 }

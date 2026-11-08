@@ -1,4 +1,4 @@
-# Ondes — lecteur IPTV pour Windows
+# Ondes — lecteur IPTV pour Windows et macOS
 
 Application de bureau (Tauri 2 + React) pour regarder vos sources IPTV :
 
@@ -17,17 +17,16 @@ Application de bureau (Tauri 2 + React) pour regarder vos sources IPTV :
 
 Ondes ne fournit aucune chaîne : utilisez uniquement des sources auxquelles vous avez légalement accès.
 
-## Obtenir l'installateur Windows
+## Installer
 
-Le Mac ne peut pas compiler l'exécutable Windows directement : c'est GitHub Actions qui s'en charge
-(`.github/workflows/build-windows.yml`).
+Les installateurs sont publiés dans les **Releases** du dépôt GitHub (Windows `.exe`/`.msi`, macOS `.dmg` universel).
+Voir `.github/release-notes.md` pour les avertissements Windows SmartScreen et macOS Gatekeeper (app non signée).
 
-1. Créez un dépôt GitHub et poussez ce dossier sur la branche `main`.
-2. Onglet **Actions** → « Build Windows » : à chaque push (ou via *Run workflow*), un artefact `Ondes-windows`
-   contient l'installateur `.exe` (NSIS) et le `.msi`.
-3. Sur le PC : lancez l'installateur. WebView2 est installé automatiquement s'il manque (Windows 10/11 l'ont déjà).
+## Compiler et publier
 
-L'installateur n'est pas signé : Windows SmartScreen affichera « Informations complémentaires → Exécuter quand même ».
+GitHub Actions (`.github/workflows/build.yml`) compile Windows et macOS à chaque push sur `main`.
+Pour publier une version : mettre à jour la version dans `package.json`, `src-tauri/tauri.conf.json` et
+`src-tauri/Cargo.toml`, puis pousser un tag `vX.Y.Z` : la release est créée automatiquement avec les installateurs.
 
 ## Développer sur le Mac
 
@@ -40,8 +39,9 @@ Dans un navigateur classique, les serveurs IPTV bloquent les requêtes (CORS) : 
 proxy `/__proxy` utilisé automatiquement. Dans l'app Windows, WebView2 est lancé avec `--disable-web-security`
 (voir `src-tauri/tauri.conf.json`), donc aucun proxy n'est nécessaire.
 
-Pour lancer l'app Tauri elle-même sur le Mac (facultatif), installez Rust (`https://rustup.rs`) puis `npm run tauri dev`.
-Sous macOS, WKWebView applique le CORS : seule la version Windows est visée.
+Pour lancer l'app Tauri sur le Mac : installez Rust puis `npm run tauri dev`. Sous macOS, WKWebView applique le CORS :
+la partie Rust démarre un relais local (`src-tauri/src/proxy.rs`, 127.0.0.1 + jeton) par lequel passent flux et images.
+Sous Windows, WebView2 est lancé sans CORS et n'en a pas besoin.
 
 ## Structure
 

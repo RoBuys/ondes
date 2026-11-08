@@ -1,3 +1,5 @@
+mod proxy;
+
 use serde::Serialize;
 use std::collections::HashMap;
 use std::path::{Path, PathBuf};
@@ -227,17 +229,41 @@ fn reveal(app: AppHandle, path: Option<String>) -> Result<(), String> {
     Ok(())
 }
 
+/// Relais local (macOS) : port et jeton, ou rien sous Windows où WebView2 n'applique pas le CORS.
+struct ProxyState(Option<proxy::ProxyInfo>);
+
+#[tauri::command]
+fn proxy_info(state: State<'_, ProxyState>) -> Option<proxy::ProxyInfo> {
+    state.0.clone()
+}
+
 #[cfg_attr(mobile, tauri::mobile_entry_point)]
 pub fn run() {
     tauri::Builder::default()
         .manage(Downloads::default())
+        .setup(|app| {
+            let info = if cfg!(target_os = "windows") {
+                None
+            } else {
+                match proxy::start() {
+                    Ok(i) => Some(i),
+                    Err(e) => {
+                        eprintln!("relais Ondes indisponible : {e}");
+                        None
+                    }
+                }
+            };
+            app.manage(ProxyState(info));
+            Ok(())
+        })
         .invoke_handler(tauri::generate_handler![
             downloads_dir,
             download_start,
             download_cancel,
             download_delete,
             file_exists,
-            reveal
+            reveal,
+            proxy_info
         ])
         .run(tauri::generate_context!())
         .expect("erreur au lancement d'Ondes");

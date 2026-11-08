@@ -1,4 +1,5 @@
 import { useEffect, useLayoutEffect, useRef, useState, type ReactNode } from 'react';
+import { mediaSrc } from '../lib/net';
 import { cx } from '../lib/util';
 
 const PATHS: Record<string, ReactNode> = {
@@ -156,7 +157,7 @@ export function Img({ src, alt, className }: { src?: string; alt: string; classN
   return (
     <img
       className={className}
-      src={src}
+      src={mediaSrc(src)}
       alt=""
       loading="lazy"
       decoding="async"

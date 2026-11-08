@@ -1,6 +1,7 @@
 import { useEffect, useMemo, useState } from 'react';
 import { useApp } from '../context';
 import { downloadsAvailable, localSrc } from '../lib/downloads';
+import { mediaSrc } from '../lib/net';
 import { getPosition, getPositions } from '../lib/store';
 import type { Episode, Movie, Show } from '../lib/types';
 import { cx, errMsg, makeSearch } from '../lib/util';
@@ -192,7 +193,7 @@ function MovieDetail({ movie, onClose }: { movie: Movie; onClose: () => void }) 
 
   return (
     <Modal onClose={onClose} className="detail">
-      {info?.backdrop && <div className="detail-backdrop" style={{ backgroundImage: `url("${info.backdrop}")` }} />}
+      {info?.backdrop && <div className="detail-backdrop" style={{ backgroundImage: `url("${mediaSrc(info.backdrop)}")` }} />}
       <div className="detail-body">
         <Img className="detail-poster" src={movie.poster} alt={movie.name} />
         <div className="detail-text">
@@ -354,7 +355,7 @@ function ShowDetail({ show, onClose }: { show: Show; onClose: () => void }) {
 
   return (
     <Modal onClose={onClose} className="detail">
-      {info?.backdrop && <div className="detail-backdrop" style={{ backgroundImage: `url("${info.backdrop}")` }} />}
+      {info?.backdrop && <div className="detail-backdrop" style={{ backgroundImage: `url("${mediaSrc(info.backdrop)}")` }} />}
       <div className="detail-body">
         <Img className="detail-poster" src={show.poster} alt={show.name} />
         <div className="detail-text">

@@ -7,9 +7,36 @@ export const isTauri = typeof window !== 'undefined' && '__TAURI_INTERNALS__' in
  */
 const useProxy = import.meta.env.DEV && !isTauri;
 
-export const proxied = (u: string) =>
+/**
+ * Sur macOS, WKWebView applique le CORS et bloque le contenu http : l'app passe par un relais local
+ * démarré par la partie Rust (127.0.0.1, protégé par un jeton). Préfixe des URL relayées, ou null.
+ */
+let nativeProxy: string | null = null;
+
+export async function initNet() {
+  if (!isTauri) return;
+  try {
+    const { invoke } = await import('@tauri-apps/api/core');
+    const info = await invoke<{ port: number; token: string } | null>('proxy_info');
+    if (info) nativeProxy = `http://127.0.0.1:${info.port}/proxy?t=${info.token}&url=`;
+  } catch {
+    /* relais indisponible : accès direct */
+  }
+}
+
+const isHttp = (u: string) => /^https?:\/\//i.test(u);
+
+/** URL à utiliser pour les requêtes réseau (fetch, hls.js, mpegts.js). */
+export const proxied = (u: string) => {
+  if (!isHttp(u)) return u;
+  if (nativeProxy) return nativeProxy + encodeURIComponent(u);
   // URL absolue : mpegts.js charge les flux depuis un Web Worker, qui ne résout pas les chemins relatifs.
-  useProxy && /^https?:\/\//i.test(u) ? `${location.origin}/__proxy?url=${encodeURIComponent(u)}` : u;
+  if (useProxy) return `${location.origin}/__proxy?url=${encodeURIComponent(u)}`;
+  return u;
+};
+
+/** URL pour <video src> et <img src> : relayée seulement là où c'est nécessaire (macOS). */
+export const mediaSrc = (u: string) => (nativeProxy && isHttp(u) ? nativeProxy + encodeURIComponent(u) : u);
 
 export async function fetchBytes(url: string, signal?: AbortSignal): Promise<Uint8Array> {
   let r: Response;
