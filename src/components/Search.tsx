@@ -42,6 +42,7 @@ export function SearchView({ query, onDone }: { query: string; onDone: () => voi
     const series: Hit<Show>[] = [];
     if (!m) return { live, movies, series };
     for (const s of sources) {
+      if (s.hidden) continue;
       const c = cats[s.id];
       if (!c) continue;
       for (const item of c.live) if (m(item.name)) live.push({ item, sourceId: s.id });

@@ -106,9 +106,10 @@ function Browser<T extends Item>({
   );
 }
 
-function PosterCard({ item, onOpen, label }: { item: Item; onOpen: () => void; label: string }) {
-  const { favs, editItem } = useApp();
+export function PosterCard({ item, onOpen, label }: { item: Item; onOpen: () => void; label: string }) {
+  const { favs, editItem, toggleFav } = useApp();
   const pos = getPosition(item.id);
+  const fav = favs.has(item.id);
   return (
     <button
       className="poster"
@@ -120,11 +121,17 @@ function PosterCard({ item, onOpen, label }: { item: Item; onOpen: () => void; l
     >
       <div className="poster-img">
         <Img src={item.poster} alt={item.name} />
-        {favs.has(item.id) && (
-          <span className="poster-fav">
-            <Icon name="star" size={14} filled />
-          </span>
-        )}
+        <span
+          className={cx('poster-fav', fav && 'on')}
+          role="button"
+          title={fav ? 'Retirer des favoris' : 'Ajouter aux favoris'}
+          onClick={(e) => {
+            e.stopPropagation();
+            toggleFav(item.id);
+          }}
+        >
+          <Icon name="star" size={15} filled={fav} />
+        </span>
         {item.rating && <span className="poster-rating">{item.rating}</span>}
         {pos && pos.d > 0 && (
           <div className="bar poster-bar">
@@ -159,7 +166,7 @@ export function MoviesView() {
   );
 }
 
-function MovieDetail({ movie, onClose }: { movie: Movie; onClose: () => void }) {
+export function MovieDetail({ movie, onClose }: { movie: Movie; onClose: () => void }) {
   const { active, play, favs, toggleFav, overlay, downloads } = useApp();
   const [info, setInfo] = useState<ExtraInfo | null>(null);
   const [err, setErr] = useState<string | null>(null);
@@ -281,7 +288,7 @@ export function SeriesView() {
   );
 }
 
-function ShowDetail({ show, onClose }: { show: Show; onClose: () => void }) {
+export function ShowDetail({ show, onClose }: { show: Show; onClose: () => void }) {
   const { active, play, favs, toggleFav, overlay, downloads } = useApp();
   const [episodes, setEpisodes] = useState<Episode[] | null>(show.episodes ?? null);
   const [info, setInfo] = useState<ExtraInfo | null>(null);

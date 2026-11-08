@@ -335,7 +335,7 @@ fn start<R: Runtime>(app: &AppHandle<R>, window: &WebviewWindow<R>, state: &MpvS
         ("demuxer-max-bytes", "150MiB"),
         ("demuxer-readahead-secs", "20"),
         ("network-timeout", "20"),
-        ("user-agent", "Mozilla/5.0 Ondes/0.2"),
+        ("user-agent", "Mozilla/5.0 Ondes/0.3"),
         ("stream-lavf-o", "reconnect=1,reconnect_streamed=1,reconnect_delay_max=5"),
         ("alang", "fre,fra,fr,french,eng,en"),
         ("slang", "fre,fra,fr"),

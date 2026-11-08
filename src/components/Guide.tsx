@@ -4,7 +4,7 @@ import { prefs } from '../lib/store';
 import type { Channel, Programme } from '../lib/types';
 import { cx, fmtDay, fmtTime } from '../lib/util';
 import { programmesFor } from '../lib/xmltv';
-import { ALL, FAV, useLiveGroups } from './Live';
+import { ALL, channelsForGroup, FAV, useLiveGroups } from './Live';
 import { Empty, Icon, Img, Modal, useNow } from './ui';
 
 const PX = 4.5; // pixels par minute
@@ -15,9 +15,9 @@ const SPAN_H = 12;
 const MIN = 60_000;
 
 export function GuideView() {
-  const { catalog, epg, epgStatus, favs, setLiveSel, setView, active, refreshEpg } = useApp();
+  const { catalog, epg, epgStatus, favs, lists, setLiveSel, setView, active, refreshEpg } = useApp();
   const live = catalog?.live ?? [];
-  const groups = useLiveGroups(live, favs);
+  const groups = useLiveGroups(live, favs, lists);
   const groupKey = `guideGroup.${active?.id}`;
   const [group, setGroupState] = useState<string>(() => prefs.get(groupKey, favs.size ? FAV : ALL));
   const [shiftH, setShiftH] = useState(0);
@@ -33,11 +33,7 @@ export function GuideView() {
     if (scroller.current) scroller.current.scrollTop = 0;
   };
 
-  const rows = useMemo(() => {
-    if (group === FAV) return live.filter((c) => favs.has(c.id));
-    if (group === ALL) return live;
-    return live.filter((c) => c.group === group);
-  }, [live, group, favs]);
+  const rows = useMemo(() => channelsForGroup(live, group, favs, lists), [live, group, favs, lists]);
 
   const start = Math.floor(now / (30 * MIN)) * 30 * MIN - 30 * MIN + shiftH * 3600_000;
   const end = start + SPAN_H * 3600_000;

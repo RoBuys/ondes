@@ -1,9 +1,10 @@
 import { createContext, useContext } from 'react';
 import type { ContentRules, Kind } from './lib/content';
 import type { DownloadsApi } from './lib/downloads';
+import type { ChannelList } from './lib/lists';
 import type { Catalog, Epg, PlaySpec, Settings, Source } from './lib/types';
 
-export type View = 'live' | 'guide' | 'movies' | 'series' | 'downloads' | 'search' | 'settings';
+export type View = 'live' | 'guide' | 'movies' | 'series' | 'favorites' | 'downloads' | 'search' | 'settings';
 
 /** Élément à ouvrir dès que le catalogue de sa source est chargé (depuis la recherche globale). */
 export interface PendingOpen {
@@ -37,7 +38,7 @@ export interface AppCtx {
   rawCatalog: Catalog | null;
   rules: ContentRules;
   setRules: (r: ContentRules) => void;
-  organize: (kind?: Kind) => void;
+  organize: (kind?: Kind | 'lists') => void;
   /** Ouvre la fenêtre « renommer / masquer » d'une chaîne, d'un film ou d'une série. */
   editItem: (id: string, label: string) => void;
   status: Status;
@@ -52,6 +53,10 @@ export interface AppCtx {
 
   favs: Set<string>;
   toggleFav: (id: string) => void;
+
+  /** Listes de chaînes de la source active */
+  lists: ChannelList[];
+  setLists: (l: ChannelList[]) => void;
 
   view: View;
   setView: (v: View) => void;

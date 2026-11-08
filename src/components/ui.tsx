@@ -95,6 +95,7 @@ const PATHS: Record<string, ReactNode> = {
   download: <path d="M12 4v11M7 10.5l5 5 5-5M5 20h14" />,
   folder: <path d="M3.5 7.5A2 2 0 0 1 5.5 5.5h4l2 2.5h7a2 2 0 0 1 2 2v7.5a2 2 0 0 1-2 2h-13a2 2 0 0 1-2-2z" />,
   pause: <path d="M8.5 5v14M15.5 5v14" />,
+  list: <path d="M9 6h11M9 12h11M9 18h11M4.5 6h.01M4.5 12h.01M4.5 18h.01" />,
   volume: (
     <>
       <path d="M4 9.5h3.5L12 5.5v13l-4.5-4H4z" />

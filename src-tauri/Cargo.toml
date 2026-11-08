@@ -1,6 +1,6 @@
 [package]
 name = "ondes"
-version = "0.2.0"
+version = "0.3.0"
 description = "Ondes — lecteur IPTV pour Windows"
 edition = "2021"
 

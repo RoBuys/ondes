@@ -7,19 +7,21 @@ import { Player } from './components/Player';
 import { SearchView } from './components/Search';
 import { AddSourceForm, DEMO_SOURCE, SettingsView } from './components/Settings';
 import { Icon, Logo, SearchBox } from './components/ui';
+import { FavoritesView } from './components/Favorites';
 import { MoviesView, SeriesView } from './components/Vod';
 import { Ctx, useApp, type AppCtx, type EpgStatus, type PendingOpen, type Status, type View } from './context';
 import { applyRules, loadRules, saveRules, type ContentRules, type Kind } from './lib/content';
 import { downloadsAvailable, useDownloads } from './lib/downloads';
+import { loadLists, saveLists, type ChannelList } from './lib/lists';
 import { epgUrlFor, loadCatalog, loadEpg } from './lib/catalog';
 import { db, prefs } from './lib/store';
-import type { Catalog, Epg, PlaySpec, Settings, Source } from './lib/types';
+import type { Catalog, Epg, PlaySpec, Section, Settings, Source } from './lib/types';
 import { cx, errMsg, fmtCount, uid } from './lib/util';
 
 const DAY = 86400_000;
 const EPG_TTL = 12 * 3600_000;
 
-const NAV: { id: View; label: string; icon: string }[] = [
+const NAV: { id: View & Section; label: string; icon: string }[] = [
   { id: 'live', label: 'Direct', icon: 'tv' },
   { id: 'guide', label: 'Guide', icon: 'guide' },
   { id: 'movies', label: 'Films', icon: 'film' },
@@ -39,7 +41,8 @@ export default function App() {
   const [liveSel, setLiveSelState] = useState<string | null>(() => prefs.get<string | null>('liveSel', null));
   const [overlay, setOverlay] = useState<PlaySpec | null>(null);
   const [rules, setRulesState] = useState<ContentRules>(() => loadRules(activeId ?? ''));
-  const [organizeKind, setOrganizeKind] = useState<Kind | null>(null);
+  const [lists, setListsState] = useState<ChannelList[]>(() => loadLists(activeId ?? ''));
+  const [organizeKind, setOrganizeKind] = useState<Kind | 'lists' | null>(null);
   const [itemTarget, setItemTarget] = useState<ItemTarget | null>(null);
   const [pendingOpen, setPendingOpen] = useState<PendingOpen | null>(null);
   const [globalQ, setGlobalQ] = useState('');
@@ -58,7 +61,26 @@ export default function App() {
     if (view !== 'search') prefs.set('view', view);
   }, [view]);
 
-  useEffect(() => setRulesState(loadRules(active?.id ?? '')), [active?.id]);
+  useEffect(() => {
+    setRulesState(loadRules(active?.id ?? ''));
+    setListsState(loadLists(active?.id ?? ''));
+  }, [active?.id]);
+  const setLists = useCallback((l: ChannelList[]) => {
+    const id = activeRef.current?.id;
+    if (!id) return;
+    saveLists(id, l);
+    setListsState(l);
+  }, []);
+
+  /* Onglets affichés pour la source active ; on quitte un onglet masqué. */
+  const sectionOn = (s: Section) => active?.sections?.[s] !== false;
+  const nav = NAV.filter((n) => sectionOn(n.id));
+  useEffect(() => {
+    if ((['live', 'guide', 'movies', 'series'] as View[]).includes(view) && !sectionOn(view as Section)) {
+      setView(nav[0]?.id ?? 'favorites');
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [active?.sections, view]);
   const setRules = useCallback((r: ContentRules) => {
     const id = activeRef.current?.id;
     if (!id) return;
@@ -245,7 +267,7 @@ export default function App() {
     rawCatalog: catalog,
     rules,
     setRules,
-    organize: (k?: Kind) => setOrganizeKind(k ?? 'l'),
+    organize: (k?: Kind | 'lists') => setOrganizeKind(k ?? 'l'),
     editItem: (id: string, label: string) => {
       const find = (c: Catalog | null) => c && [...c.live, ...c.movies, ...c.series].find((x) => x.id === id);
       const shown = find(viewCatalog);
@@ -261,6 +283,8 @@ export default function App() {
     setSettings,
     favs,
     toggleFav,
+    lists,
+    setLists,
     view,
     setView,
     liveSel,
@@ -288,12 +312,16 @@ export default function App() {
           <div className="rail-logo" title="Ondes">
             <Logo size={34} />
           </div>
-          {NAV.map((n) => (
+          {nav.map((n) => (
             <button key={n.id} className={cx('rail-btn', view === n.id && 'on')} onClick={() => setView(n.id)}>
               <Icon name={n.icon} size={22} />
               <span>{n.label}</span>
             </button>
           ))}
+          <button className={cx('rail-btn', view === 'favorites' && 'on')} onClick={() => setView('favorites')}>
+            <Icon name="star" size={22} />
+            <span>Favoris</span>
+          </button>
           {downloadsAvailable && (
             <button className={cx('rail-btn', view === 'downloads' && 'on')} onClick={() => setView('downloads')}>
               <Icon name="download" size={22} />
@@ -311,7 +339,7 @@ export default function App() {
         <main className="main">
           <header className="topbar">
             <select className="select source-select" value={activeId ?? ''} onChange={(e) => setActiveId(e.target.value)}>
-              {sources.map((s) => (
+              {sources.filter((s) => !s.hidden || s.id === activeId).map((s) => (
                 <option key={s.id} value={s.id}>
                   {s.name}
                 </option>
@@ -376,6 +404,8 @@ export default function App() {
               </div>
             ) : view === 'live' ? (
               <LiveView />
+            ) : view === 'favorites' ? (
+              <FavoritesView />
             ) : view === 'guide' ? (
               <GuideView />
             ) : view === 'movies' ? (

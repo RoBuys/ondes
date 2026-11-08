@@ -13,6 +13,9 @@ Application de bureau (Tauri 2 + React) pour regarder vos sources IPTV :
 - **Reconnexion intelligente** : en cas de coupure ou d'image figée, le flux est relancé automatiquement (jusqu'à 8 essais,
   délai croissant, reprise immédiate au retour du réseau) ; les films reprennent à la même position.
 - **Recherche globale** : la barre du haut cherche chaînes, films et séries dans toutes les sources à la fois.
+- **Favoris et listes** : étoile sur les chaînes, films et séries (onglet « Favoris ») ; listes de chaînes personnelles
+  (clic droit ou bouton « Listes » sous le lecteur), gérées dans Organiser → Mes listes.
+- **Par source** (Réglages → Modifier) : onglets affichés et masquage de la source.
 - **Organiser** : masquer, renommer, réordonner (glisser-déposer) les groupes ; deux groupes renommés pareil fusionnent.
   Clic droit sur une chaîne, un film ou une série pour la renommer ou la masquer.
 - **Téléchargements** (app Windows) : films, épisodes ou saison entière dans `Vidéos\Ondes`, un à la fois pour respecter

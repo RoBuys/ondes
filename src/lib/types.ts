@@ -15,7 +15,13 @@ export interface Source {
   /** Guide XMLTV forcé (sinon celui annoncé par la source) */
   epgUrl?: string;
   createdAt: number;
+  /** Source masquée du sélecteur et de la recherche globale */
+  hidden?: boolean;
+  /** Onglets affichés pour cette source (tous par défaut) */
+  sections?: Partial<Record<Section, boolean>>;
 }
+
+export type Section = 'live' | 'guide' | 'movies' | 'series';
 
 export interface Channel {
   id: string;

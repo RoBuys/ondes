@@ -1,7 +1,14 @@
 import { useState, type FormEvent } from 'react';
 import { useApp } from '../context';
 import { mpvInfo } from '../lib/mpv';
-import type { Source } from '../lib/types';
+import type { Section, Source } from '../lib/types';
+
+const SECTIONS: [Section, string][] = [
+  ['live', 'Direct'],
+  ['guide', 'Guide'],
+  ['movies', 'Films'],
+  ['series', 'Séries'],
+];
 import { cx, errMsg, fmtCount, fmtDate, uid } from '../lib/util';
 import { xtLogin } from '../lib/xtream';
 import { Icon } from './ui';
@@ -139,6 +146,13 @@ function SourceCard({ s }: { s: Source }) {
   const { active, setActiveId, refresh, refreshEpg, removeSource, updateSource, rawCatalog: catalog, organize } = useApp();
   const [confirm, setConfirm] = useState(false);
   const [editing, setEditing] = useState(false);
+  const [sections, setSections] = useState<Record<Section, boolean>>({
+    live: s.sections?.live !== false,
+    guide: s.sections?.guide !== false,
+    movies: s.sections?.movies !== false,
+    series: s.sections?.series !== false,
+  });
+  const [hidden, setHidden] = useState(!!s.hidden);
   const [name, setName] = useState(s.name);
   const [epgUrl, setEpgUrl] = useState(s.epgUrl ?? '');
   const isActive = active?.id === s.id;
@@ -156,6 +170,7 @@ function SourceCard({ s }: { s: Source }) {
         <div className="source-text">
           <div className="source-name">
             {s.name} {isActive && <span className="badge">Active</span>}
+            {s.hidden && <span className="badge muted-badge">Masquée</span>}
           </div>
           <div className="muted small ellipsis">{where}</div>
           {isActive && catalog && (
@@ -202,7 +217,7 @@ function SourceCard({ s }: { s: Source }) {
           onSubmit={(e) => {
             e.preventDefault();
             const changedEpg = (s.epgUrl ?? '') !== epgUrl.trim();
-            updateSource({ ...s, name: name.trim() || s.name, epgUrl: epgUrl.trim() || undefined });
+            updateSource({ ...s, name: name.trim() || s.name, epgUrl: epgUrl.trim() || undefined, sections, hidden });
             setEditing(false);
             if (changedEpg && isActive) window.setTimeout(refreshEpg, 0);
           }}
@@ -217,6 +232,21 @@ function SourceCard({ s }: { s: Source }) {
               <input value={epgUrl} onChange={(e) => setEpgUrl(e.target.value)} placeholder="Automatique" />
             </label>
           </div>
+          <div className="field">
+            <span>Onglets affichés pour cette source</span>
+            <div className="row">
+              {SECTIONS.map(([k, label]) => (
+                <label key={k} className="list-check">
+                  <input type="checkbox" checked={sections[k]} onChange={() => setSections({ ...sections, [k]: !sections[k] })} />
+                  <span>{label}</span>
+                </label>
+              ))}
+            </div>
+          </div>
+          <label className="list-check">
+            <input type="checkbox" checked={hidden} onChange={() => setHidden(!hidden)} />
+            <span>Masquer cette source du sélecteur et de la recherche globale</span>
+          </label>
           <div className="row end">
             <button className="btn">Enregistrer</button>
           </div>

@@ -2,6 +2,7 @@ import { useEffect, useMemo, useState } from 'react';
 import { useApp } from '../context';
 import { prefs } from '../lib/store';
 import type { Channel, PlaySpec, Settings } from '../lib/types';
+import { channelsOf, LIST_PREFIX, type ChannelList } from '../lib/lists';
 import { cx, fmtTime, makeSearch } from '../lib/util';
 import { nowAndNext, programmesFor, progressOf } from '../lib/xmltv';
 import { Player } from './Player';
@@ -15,27 +16,40 @@ export function channelSpec(ch: Channel, settings: Settings): PlaySpec {
   return { key: `${ch.id}|${settings.liveFormat}`, title: ch.name, subtitle: ch.group, urls, live: true };
 }
 
-export function useLiveGroups(live: Channel[], favs: Set<string>): GroupItem[] {
+export function useLiveGroups(live: Channel[], favs: Set<string>, lists: ChannelList[]): GroupItem[] {
   return useMemo(() => {
     const counts = new Map<string, number>();
     for (const c of live) counts.set(c.group, (counts.get(c.group) || 0) + 1);
     const favCount = live.reduce((n, c) => n + (favs.has(c.id) ? 1 : 0), 0);
+    const ids = new Set(live.map((c) => c.id));
     return [
       { id: FAV, label: 'Favoris', count: favCount, icon: 'star' },
+      ...lists.map((l) => ({ id: LIST_PREFIX + l.id, label: l.name, count: l.ids.filter((i) => ids.has(i)).length, icon: 'list' })),
       { id: ALL, label: 'Toutes les chaînes', count: live.length, icon: 'tv' },
       ...[...counts].map(([g, n]) => ({ id: g, label: g, count: n })),
     ];
-  }, [live, favs]);
+  }, [live, favs, lists]);
+}
+
+/** Chaînes d'un groupe : Favoris, une liste personnelle, toutes, ou un groupe de la playlist. */
+export function channelsForGroup(live: Channel[], group: string, favs: Set<string>, lists: ChannelList[]): Channel[] {
+  if (group === FAV) return live.filter((c) => favs.has(c.id));
+  if (group === ALL) return live;
+  if (group.startsWith(LIST_PREFIX)) {
+    const l = lists.find((x) => LIST_PREFIX + x.id === group);
+    return l ? channelsOf(l, new Map(live.map((c) => [c.id, c]))) : [];
+  }
+  return live.filter((c) => c.group === group);
 }
 
 export function LiveView() {
-  const { catalog, epg, favs, toggleFav, liveSel, setLiveSel, overlay, settings, active, organize, editItem } = useApp();
+  const { catalog, epg, favs, toggleFav, liveSel, setLiveSel, overlay, settings, active, organize, editItem, lists } = useApp();
   const live = catalog?.live ?? [];
   const groupKey = `liveGroup.${active?.id}`;
   const [group, setGroupState] = useState<string>(() => prefs.get(groupKey, ALL));
   const [q, setQ] = useState('');
   const now = useNow(30000);
-  const groups = useLiveGroups(live, favs);
+  const groups = useLiveGroups(live, favs, lists);
 
   useEffect(() => setGroupState(prefs.get(groupKey, ALL)), [groupKey]);
   const setGroup = (g: string) => {
@@ -47,10 +61,8 @@ export function LiveView() {
   const list = useMemo(() => {
     const s = makeSearch(q);
     if (s) return live.filter((c) => s(c.name));
-    if (group === FAV) return live.filter((c) => favs.has(c.id));
-    if (group === ALL) return live;
-    return live.filter((c) => c.group === group);
-  }, [live, group, q, favs]);
+    return channelsForGroup(live, group, favs, lists);
+  }, [live, group, q, favs, lists]);
 
   const byId = useMemo(() => new Map(live.map((c) => [c.id, c])), [live]);
   const sel = liveSel ? byId.get(liveSel) : undefined;
@@ -161,6 +173,9 @@ export function LiveView() {
                   <h2>{sel.name}</h2>
                   <div className="muted">{sel.group}</div>
                 </div>
+                <button className="btn ghost" onClick={() => editItem(sel.id, `Chaîne · ${sel.group}`)} title="Ajouter à une liste, renommer, masquer">
+                  <Icon name="list" size={16} /> Listes
+                </button>
                 <button className={cx('btn ghost', favs.has(sel.id) && 'active')} onClick={() => toggleFav(sel.id)}>
                   <Icon name="star" size={16} filled={favs.has(sel.id)} />
                   {favs.has(sel.id) ? 'Favori' : 'Ajouter aux favoris'}

@@ -120,7 +120,7 @@ async fn run_download(app: &AppHandle, id: &str, url: &str, path: &Path, cancel:
     let offset = tokio::fs::metadata(&part).await.map(|m| m.len()).unwrap_or(0);
 
     let client = reqwest::Client::builder()
-        .user_agent("Mozilla/5.0 Ondes/0.2.0")
+        .user_agent("Mozilla/5.0 Ondes/0.3.0")
         .connect_timeout(Duration::from_secs(20))
         .build()
         .map_err(|e| e.to_string())?;

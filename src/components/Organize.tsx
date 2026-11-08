@@ -1,7 +1,8 @@
 import { useMemo, useState } from 'react';
 import { useApp } from '../context';
 import { emptyRules, rawGroups, type ContentRules, type Kind } from '../lib/content';
-import { cx } from '../lib/util';
+import { newList, toggleInList, type ChannelList } from '../lib/lists';
+import { cx, makeSearch } from '../lib/util';
 import { Icon, Modal } from './ui';
 
 const KINDS: { id: Kind; label: string }[] = [
@@ -11,9 +12,12 @@ const KINDS: { id: Kind; label: string }[] = [
 ];
 
 /** Fenêtre « Organiser » : groupes (visibilité, nom, ordre) et éléments masqués. */
-export function OrganizeModal({ onClose, initialKind = 'l' }: { onClose: () => void; initialKind?: Kind }) {
+export function OrganizeModal({ onClose, initialKind = 'l' }: { onClose: () => void; initialKind?: Kind | 'lists' }) {
   const { rawCatalog, rules, setRules, active } = useApp();
-  const [kind, setKind] = useState<Kind>(initialKind);
+  const [tab, setTab] = useState<Kind | 'lists'>(initialKind);
+  const kind: Kind = tab === 'lists' ? 'l' : tab;
+  const [q, setQ] = useState('');
+  const match = makeSearch(q);
   const [drag, setDrag] = useState<number | null>(null);
   const [over, setOver] = useState<number | null>(null);
   const [confirmReset, setConfirmReset] = useState(false);
@@ -62,11 +66,22 @@ export function OrganizeModal({ onClose, initialKind = 'l' }: { onClose: () => v
       return { ...r, groupNames };
     });
 
+  /** Groupes concernés par les actions groupées : ceux qui correspondent au filtre, ou tous. */
+  const shown = groups.filter((g) => !match || match(g.group) || match(rules.groupNames[g.key] ?? ''));
+
   const allVisible = (visible: boolean) =>
     update((r) => {
-      const keys = new Set(groups.map((g) => g.key));
+      const keys = new Set(shown.map((g) => g.key));
       const others = r.hiddenGroups.filter((k) => !keys.has(k));
       return { ...r, hiddenGroups: visible ? others : [...others, ...keys] };
+    });
+
+  /** N'afficher que les groupes filtrés (masque tous les autres groupes de ce type). */
+  const onlyThese = () =>
+    update((r) => {
+      const keep = new Set(shown.map((g) => g.key));
+      const others = r.hiddenGroups.filter((k) => !k.startsWith(`${kind}|`));
+      return { ...r, hiddenGroups: [...others, ...groups.filter((g) => !keep.has(g.key)).map((g) => g.key)] };
     });
 
   const sortAlpha = () =>
@@ -84,19 +99,38 @@ export function OrganizeModal({ onClose, initialKind = 'l' }: { onClose: () => v
 
       <div className="tabs">
         {KINDS.map((k) => (
-          <button key={k.id} type="button" className={cx('tab', kind === k.id && 'on')} onClick={() => setKind(k.id)}>
+          <button key={k.id} type="button" className={cx('tab', tab === k.id && 'on')} onClick={() => setTab(k.id)}>
             {k.label}
           </button>
         ))}
+        <button type="button" className={cx('tab', tab === 'lists' && 'on')} onClick={() => setTab('lists')}>
+          <Icon name="list" size={15} /> Mes listes
+        </button>
       </div>
 
+      {tab === 'lists' ? (
+        <ListsManager />
+      ) : (
+      <>
+      <div className="row">
+        <label className="search org-filter">
+          <Icon name="search" size={16} />
+          <input value={q} onChange={(e) => setQ(e.target.value)} placeholder="Filtrer les groupes (ex. FR, Sport)" spellCheck={false} />
+          {q && <span className="muted small">{shown.length}/{groups.length}</span>}
+        </label>
+      </div>
       <div className="row">
         <button className="btn ghost" onClick={() => allVisible(true)}>
-          Tout afficher
+          {q ? 'Afficher ces groupes' : 'Tout afficher'}
         </button>
         <button className="btn ghost" onClick={() => allVisible(false)}>
-          Tout masquer
+          {q ? 'Masquer ces groupes' : 'Tout masquer'}
         </button>
+        {q && (
+          <button className="btn ghost" onClick={onlyThese}>
+            N’afficher que ceux-ci
+          </button>
+        )}
         <button className="btn ghost" onClick={sortAlpha}>
           Trier de A à Z
         </button>
@@ -110,6 +144,7 @@ export function OrganizeModal({ onClose, initialKind = 'l' }: { onClose: () => v
       ) : (
         <div className="org-list">
           {groups.map((g, i) => {
+            if (match && !match(g.group) && !match(rules.groupNames[g.key] ?? '')) return null;
             const hidden = rules.hiddenGroups.includes(g.key);
             return (
               <div
@@ -168,6 +203,9 @@ export function OrganizeModal({ onClose, initialKind = 'l' }: { onClose: () => v
         </div>
       )}
 
+      </>
+      )}
+
       {hiddenItems.length > 0 && (
         <div className="org-hidden">
           <div className="section-label">Éléments masqués ({hiddenItems.length})</div>
@@ -222,6 +260,7 @@ export interface ItemTarget {
 export function ItemModal({ target, onClose }: { target: ItemTarget; onClose: () => void }) {
   const { rules, setRules, favs, toggleFav } = useApp();
   const [name, setName] = useState(target.name);
+  const isChannel = target.id.includes(':l:');
 
   const save = () => {
     const itemNames = { ...rules.itemNames };
@@ -275,7 +314,172 @@ export function ItemModal({ target, onClose }: { target: ItemTarget; onClose: ()
           </button>
         </div>
       </form>
+      {isChannel && <ListPicker channelId={target.id} />}
     </Modal>
   );
 }
 
+
+/** Cases à cocher « dans quelles listes » pour une chaîne, avec création d'une liste. */
+export function ListPicker({ channelId }: { channelId: string }) {
+  const { lists, setLists } = useApp();
+  const [name, setName] = useState('');
+  return (
+    <div className="list-picker">
+      <div className="section-label">Mes listes</div>
+      {lists.length === 0 && <div className="muted small">Aucune liste pour l’instant : créez-en une ci-dessous.</div>}
+      {lists.map((l) => (
+        <label key={l.id} className="list-check">
+          <input type="checkbox" checked={l.ids.includes(channelId)} onChange={() => setLists(toggleInList(lists, l.id, channelId))} />
+          <span>{l.name}</span>
+          <span className="group-count">{l.ids.length}</span>
+        </label>
+      ))}
+      <form
+        className="row"
+        onSubmit={(e) => {
+          e.preventDefault();
+          if (!name.trim()) return;
+          const l = newList(name);
+          setLists([...lists, { ...l, ids: [channelId] }]);
+          setName('');
+        }}
+      >
+        <input className="list-new" value={name} onChange={(e) => setName(e.target.value)} placeholder="Nouvelle liste (ex. Sport)" />
+        <button className="btn ghost" disabled={!name.trim()}>
+          <Icon name="plus" size={15} /> Créer et ajouter
+        </button>
+      </form>
+    </div>
+  );
+}
+
+/** Onglet « Mes listes » : renommer, supprimer, réordonner les listes et leurs chaînes. */
+function ListsManager() {
+  const { lists, setLists, rawCatalog, rules } = useApp();
+  const [sel, setSel] = useState<string | null>(lists[0]?.id ?? null);
+  const [name, setName] = useState('');
+  const [confirmDel, setConfirmDel] = useState(false);
+  const byId = useMemo(() => new Map((rawCatalog?.live ?? []).map((c) => [c.id, c])), [rawCatalog]);
+  const cur = lists.find((l) => l.id === sel) ?? null;
+
+  const patch = (id: string, fn: (l: ChannelList) => ChannelList) => setLists(lists.map((l) => (l.id === id ? fn(l) : l)));
+  const moveList = (i: number, d: number) => {
+    const j = i + d;
+    if (j < 0 || j >= lists.length) return;
+    const next = [...lists];
+    [next[i], next[j]] = [next[j], next[i]];
+    setLists(next);
+  };
+  const moveItem = (i: number, d: number) =>
+    cur &&
+    patch(cur.id, (l) => {
+      const j = i + d;
+      if (j < 0 || j >= l.ids.length) return l;
+      const ids = [...l.ids];
+      [ids[i], ids[j]] = [ids[j], ids[i]];
+      return { ...l, ids };
+    });
+
+  return (
+    <div className="lists-manager">
+      <div className="lists-side">
+        {lists.map((l, i) => (
+          <div key={l.id} className={cx('lists-row', l.id === sel && 'on')} onClick={() => (setSel(l.id), setConfirmDel(false))}>
+            <span className="ellipsis">{l.name}</span>
+            <span className="group-count">{l.ids.length}</span>
+            <button className="icon-btn sm" onClick={(e) => (e.stopPropagation(), moveList(i, -1))} disabled={i === 0} title="Monter">
+              <Icon name="up" size={15} />
+            </button>
+            <button className="icon-btn sm" onClick={(e) => (e.stopPropagation(), moveList(i, 1))} disabled={i === lists.length - 1} title="Descendre">
+              <Icon name="down" size={15} />
+            </button>
+          </div>
+        ))}
+        <form
+          className="row"
+          onSubmit={(e) => {
+            e.preventDefault();
+            if (!name.trim()) return;
+            const l = newList(name);
+            setLists([...lists, l]);
+            setSel(l.id);
+            setName('');
+          }}
+        >
+          <input className="list-new" value={name} onChange={(e) => setName(e.target.value)} placeholder="Nouvelle liste" />
+          <button className="icon-btn" disabled={!name.trim()} title="Créer">
+            <Icon name="plus" size={18} />
+          </button>
+        </form>
+      </div>
+
+      <div className="lists-main">
+        {!cur ? (
+          <div className="pane-empty">Créez une liste, puis ajoutez-y des chaînes par clic droit ou avec le bouton « Listes » sous le lecteur.</div>
+        ) : (
+          <>
+            <div className="row">
+              <input
+                key={cur.id}
+                className="list-new"
+                defaultValue={cur.name}
+                onBlur={(e) => e.target.value.trim() && patch(cur.id, (l) => ({ ...l, name: e.target.value.trim() }))}
+                onKeyDown={(e) => e.key === 'Enter' && (e.target as HTMLInputElement).blur()}
+                aria-label="Nom de la liste"
+              />
+              {confirmDel ? (
+                <button
+                  className="btn danger"
+                  onClick={() => {
+                    setLists(lists.filter((l) => l.id !== cur.id));
+                    setSel(lists.find((l) => l.id !== cur.id)?.id ?? null);
+                    setConfirmDel(false);
+                  }}
+                >
+                  Supprimer la liste
+                </button>
+              ) : (
+                <button className="icon-btn" onClick={() => setConfirmDel(true)} title="Supprimer la liste">
+                  <Icon name="trash" size={18} />
+                </button>
+              )}
+            </div>
+            {cur.ids.length === 0 ? (
+              <div className="pane-empty">Liste vide : clic droit sur une chaîne → « Mes listes ».</div>
+            ) : (
+              <div className="org-list">
+                {cur.ids.map((id, i) => {
+                  const ch = byId.get(id);
+                  return (
+                    <div key={id} className="org-row">
+                      <span className="ellipsis" style={{ flex: 1 }}>
+                        {ch ? (rules.itemNames[id] ?? ch.name) : <span className="muted">Chaîne absente de la playlist</span>}
+                      </span>
+                      <span className="muted small ellipsis" style={{ maxWidth: 160 }}>
+                        {ch?.group}
+                      </span>
+                      <button className="icon-btn sm" onClick={() => moveItem(i, -1)} disabled={i === 0} title="Monter">
+                        <Icon name="up" size={16} />
+                      </button>
+                      <button className="icon-btn sm" onClick={() => moveItem(i, 1)} disabled={i === cur.ids.length - 1} title="Descendre">
+                        <Icon name="down" size={16} />
+                      </button>
+                      <button
+                        className="icon-btn sm"
+                        onClick={() => patch(cur.id, (l) => ({ ...l, ids: l.ids.filter((x) => x !== id) }))}
+                        title="Retirer de la liste"
+                      >
+                        <Icon name="x" size={16} />
+                      </button>
+                    </div>
+                  );
+                })}
+              </div>
+            )}
+          </>
+        )}
+      </div>
+    </div>
+  );
+}
