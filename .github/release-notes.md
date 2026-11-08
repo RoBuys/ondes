@@ -1,4 +1,4 @@
-Première version d'**Ondes**, lecteur IPTV pour Windows et macOS.
+**Ondes**, lecteur IPTV pour macOS (Apple Silicon) et Windows.
 
 ## Fonctions
 
@@ -10,15 +10,16 @@ Première version d'**Ondes**, lecteur IPTV pour Windows et macOS.
 - **Recherche globale** dans toutes les sources
 - **Organiser** : masquer, renommer, réordonner et fusionner les groupes ; clic droit pour renommer ou masquer un élément
 - **Téléchargements** de films, épisodes et saisons pour regarder hors connexion
+- **macOS : moteur de lecture mpv** — lit la TNT entrelacée (1080i), l'AC-3, le HEVC ; choix de la piste audio et des sous-titres (DVB compris), désentrelacement automatique. Windows utilise pour l'instant le lecteur web.
 
 Ondes ne fournit aucune chaîne : utilisez uniquement des sources auxquelles vous avez légalement accès.
 
 ## Installation
 
-**Windows** : `Ondes_0.1.0_x64-setup.exe` (ou le `.msi`). L'installateur n'est pas signé : à l'avertissement SmartScreen,
+**Windows** : l'installateur `…_x64-setup.exe` (ou le `.msi`). L'installateur n'est pas signé : à l'avertissement SmartScreen,
 choisissez « Informations complémentaires » puis « Exécuter quand même ».
 
-**macOS 11 ou plus récent** (Apple Silicon et Intel) : ouvrez `Ondes_0.1.0_universal.dmg` et glissez Ondes dans Applications.
+**macOS 11 ou plus récent, Mac Apple Silicon (M1 et suivants)** : ouvrez le `.dmg` et glissez Ondes dans Applications.
 L'app n'est pas notarisée par Apple : au premier lancement, faites clic droit → Ouvrir. Si macOS indique que l'app
 « est endommagée », exécutez dans le Terminal :
 

@@ -98,6 +98,8 @@ export interface Epg {
 
 export interface Settings {
   liveFormat: 'ts' | 'm3u8';
+  /** Moteur de lecture : mpv natif (par défaut s'il est disponible) ou lecteur web. */
+  engine?: 'mpv' | 'web';
 }
 
 export interface PlaySpec {
@@ -109,4 +111,8 @@ export interface PlaySpec {
   resumeKey?: string;
   poster?: string;
   onEnded?: () => void;
+  /** Réglages mpegts.js imposés (autotest uniquement) */
+  tsOverride?: { isLive?: boolean; config?: Record<string, unknown> };
+  /** Moteur imposé (autotest uniquement) */
+  forceEngine?: 'hls' | 'ts' | 'native';
 }

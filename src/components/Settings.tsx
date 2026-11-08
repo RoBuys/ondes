@@ -1,5 +1,6 @@
 import { useState, type FormEvent } from 'react';
 import { useApp } from '../context';
+import { mpvInfo } from '../lib/mpv';
 import type { Source } from '../lib/types';
 import { cx, errMsg, fmtCount, fmtDate, uid } from '../lib/util';
 import { xtLogin } from '../lib/xtream';
@@ -265,6 +266,35 @@ export function SettingsView() {
               </button>
               <button className={cx(settings.liveFormat === 'm3u8' && 'on')} onClick={() => setSettings({ liveFormat: 'm3u8' })}>
                 HLS
+              </button>
+            </div>
+          </div>
+        </div>
+      </section>
+
+      <section>
+        <h2>Moteur de lecture</h2>
+        <div className="card">
+          <div className="setting">
+            <div>
+              <div className="setting-title">Lecteur vidéo</div>
+              <div className="muted small">
+                {mpvInfo()
+                  ? `${mpvInfo()!.version} : lit tous les formats (TNT entrelacée, AC-3, HEVC…), pistes audio et sous-titres.`
+                  : 'mpv est indisponible sur cet appareil : le lecteur web est utilisé.'}{' '}
+                Le changement s’applique à la prochaine lecture.
+              </div>
+            </div>
+            <div className="segmented">
+              <button
+                className={cx(settings.engine !== 'web' && 'on')}
+                disabled={!mpvInfo()}
+                onClick={() => setSettings({ engine: 'mpv' })}
+              >
+                mpv
+              </button>
+              <button className={cx(settings.engine === 'web' && 'on')} onClick={() => setSettings({ engine: 'web' })}>
+                Web
               </button>
             </div>
           </div>

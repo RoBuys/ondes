@@ -1,7 +1,10 @@
 import Hls from 'hls.js';
 import mpegts from 'mpegts.js';
 import { useCallback, useEffect, useRef, useState } from 'react';
+import { diag, logEnvironment, redact } from '../lib/diag';
+import { mpvEnabled } from '../lib/mpv';
 import { mediaSrc, proxied } from '../lib/net';
+import { MpvPlayer } from './MpvPlayer';
 import { clearPosition, getPosition, prefs, setPosition } from '../lib/store';
 import type { PlaySpec } from '../lib/types';
 import { cx } from '../lib/util';
@@ -37,6 +40,15 @@ function attemptsFor(urls: string[], live: boolean): Attempt[] {
   return out;
 }
 
+/** Secondes de données disponibles après la position courante. */
+function bufferedAhead(v: HTMLVideoElement): number {
+  const t = v.currentTime;
+  for (let i = 0; i < v.buffered.length; i++) {
+    if (v.buffered.start(i) <= t + 0.05 && v.buffered.end(i) > t) return v.buffered.end(i) - t;
+  }
+  return 0;
+}
+
 interface State {
   loading: boolean;
   error?: string;
@@ -46,7 +58,13 @@ interface State {
 
 const MAX_RECONNECTS = 8;
 
-export function Player({
+/** Lecteur : mpv natif quand il est disponible, sinon le lecteur web (hls.js / mpegts.js). */
+export function Player(props: { spec: PlaySpec; mode: 'inline' | 'overlay'; onClose?: () => void }) {
+  const forced = props.spec.forceEngine || props.spec.tsOverride;
+  return mpvEnabled() && !forced ? <MpvPlayer {...props} /> : <WebPlayer {...props} />;
+}
+
+function WebPlayer({
   spec,
   mode,
   onClose,
@@ -67,7 +85,9 @@ export function Player({
   /* Moteur de lecture, avec reconnexion automatique */
   useEffect(() => {
     const v = videoRef.current!;
-    const attempts = attemptsFor(spec.urls, spec.live);
+    const attempts = spec.forceEngine ? spec.urls.map((url) => ({ url, engine: spec.forceEngine! })) : attemptsFor(spec.urls, spec.live);
+    logEnvironment({ hlsSupported: Hls.isSupported(), mpegtsSupported: mpegts.isSupported(), mpegts: mpegts.getFeatureList() });
+    diag('lecture', spec.live ? 'direct' : 'vod', spec.title, attempts.map((a) => `${a.engine}:${redact(a.url)}`));
     let disposed = false;
     let token = -1;
     let destroy: (() => void) | null = null;
@@ -77,6 +97,7 @@ export function Player({
     let hadPlayed = false;
     let working = 0;
     let reconnects = 0;
+    let stableTimer: number | undefined;
     let resumeAt = 0;
     let lastT = -1;
     let frozenFor = 0;
@@ -111,10 +132,15 @@ export function Player({
 
     const fail = (t: number, why: string): void => {
       if (disposed || t !== token) return;
+      diag('échec', t, attempts[t]?.engine, why);
       if (hadPlayed && !spec.live && v.currentTime > 1) resumeAt = v.currentTime;
+      window.clearTimeout(stableTimer);
       teardown();
+      // Erreur de décodage : relancer la même source ne servirait à rien, on passe au moteur suivant.
+      const decode = /code 3|decode|MSEError|MediaError/i.test(why);
+      if (decode && t + 1 < attempts.length) return run(t + 1);
       // Coupure en cours de lecture : on relance la source qui fonctionnait, avec un délai croissant.
-      if (hadPlayed && reconnects < MAX_RECONNECTS) return scheduleReconnect();
+      if (hadPlayed && !decode && reconnects < MAX_RECONNECTS) return scheduleReconnect();
       if (!hadPlayed && t + 1 < attempts.length) return run(t + 1);
       token = -1;
       setState({ loading: false, error: hadPlayed ? `Connexion perdue (${why})` : why });
@@ -125,6 +151,7 @@ export function Player({
       const t = i;
       const a = attempts[i];
       engine = a.engine;
+      diag('essai', i, a.engine, redact(a.url));
       lastT = -1;
       frozenFor = 0;
       setState((s) => (s.reconnecting ? s : { loading: true }));
@@ -160,13 +187,14 @@ export function Player({
         } else if (a.engine === 'ts') {
           if (!mpegts.isSupported()) return fail(t, 'MPEG-TS non pris en charge');
           const p = mpegts.createPlayer(
-            { type: 'mpegts', isLive: spec.live, url: proxied(a.url) },
+            { type: 'mpegts', isLive: spec.tsOverride?.isLive ?? spec.live, url: proxied(a.url) },
             {
               enableWorker: true,
               enableStashBuffer: !spec.live,
               liveBufferLatencyChasing: spec.live,
               autoCleanupSourceBuffer: true,
               lazyLoad: !spec.live,
+              ...spec.tsOverride?.config,
             },
           );
           p.on(mpegts.Events.ERROR, (type: string, detail: string) => fail(t, `MPEG-TS : ${type} / ${detail}`));
@@ -189,10 +217,14 @@ export function Player({
 
     const onPlaying = () => {
       window.clearTimeout(timer);
+      if (!hadPlayed) diag('lecture démarrée', engine, `${v.videoWidth}x${v.videoHeight}`);
       if (token >= 0) {
         hadPlayed = true;
         working = token;
-        reconnects = 0;
+        // Le compteur de reconnexions n'est remis à zéro qu'après 30 s de lecture stable,
+        // sinon un flux qui démarre puis échoue aussitôt serait relancé indéfiniment.
+        window.clearTimeout(stableTimer);
+        stableTimer = window.setTimeout(() => (reconnects = 0), 30000);
       }
       setState({ loading: false });
     };
@@ -211,20 +243,35 @@ export function Player({
       if (engine === 'hls' || token < 0) return;
       const err = v.error;
       if (!err) return;
+      diag('erreur média', engine, err.code, err.message);
       fail(token, `Format non pris en charge (code ${err.code})`);
     };
 
     // Détection de flux figé : l'image ne progresse plus alors que la lecture est en cours.
+    let nudges = 0;
     const watchdog = window.setInterval(() => {
-      if (token < 0 || !hadPlayed || v.paused || v.ended) {
+      if (token < 0 || v.paused || v.ended || v.seeking) {
         frozenFor = 0;
+        lastT = v.currentTime;
         return;
       }
-      if (v.currentTime === lastT) frozenFor += 2;
-      else frozenFor = 0;
+      if (v.currentTime === lastT) frozenFor += 1;
+      else {
+        frozenFor = 0;
+        nudges = 0;
+      }
       lastT = v.currentTime;
-      if (frozenFor >= (spec.live ? 12 : 20)) fail(token, 'flux figé');
-    }, 2000);
+      // WebKit (macOS) : l'horloge média reste parfois bloquée au début alors que les données sont là.
+      // Un petit saut en avant la relance.
+      if (frozenFor >= 2 && nudges < 3 && v.readyState >= 3 && bufferedAhead(v) > 0.5) {
+        nudges++;
+        frozenFor = 0;
+        diag('relance image figée', v.currentTime.toFixed(3));
+        v.currentTime = v.currentTime + 0.1;
+        return;
+      }
+      if (hadPlayed && frozenFor >= (spec.live ? 12 : 20)) fail(token, 'flux figé');
+    }, 1000);
 
     // Retour du réseau : on n'attend pas la fin du délai.
     const onOnline = () => {
@@ -247,6 +294,7 @@ export function Player({
       disposed = true;
       window.clearInterval(watchdog);
       window.clearTimeout(retryTimer);
+      window.clearTimeout(stableTimer);
       v.removeEventListener('playing', onPlaying);
       v.removeEventListener('canplay', onCanPlay);
       v.removeEventListener('loadedmetadata', onMeta);

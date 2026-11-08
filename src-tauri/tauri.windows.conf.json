@@ -1,0 +1,18 @@
+{
+  "app": {
+    "windows": [
+      {
+        "label": "main",
+        "title": "Ondes",
+        "width": 1320,
+        "height": 820,
+        "minWidth": 980,
+        "minHeight": 620,
+        "center": true,
+        "backgroundColor": "#0d0f14",
+        "additionalBrowserArgs": "--disable-web-security --disable-features=msWebOOUI,msPdfOOUI,msSmartScreenProtection --autoplay-policy=no-user-gesture-required",
+        "transparent": true
+      }
+    ]
+  }
+}

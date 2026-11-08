@@ -20,9 +20,9 @@ jobs:
             args: ''
             rust_targets: ''
           - platform: macos
-            os: macos-latest
-            args: '--target universal-apple-darwin'
-            rust_targets: 'aarch64-apple-darwin,x86_64-apple-darwin'
+            os: macos-latest # Apple Silicon
+            args: ''
+            rust_targets: ''
     runs-on: ${{ matrix.os }}
     steps:
       - uses: actions/checkout@v4
@@ -42,6 +42,12 @@ jobs:
           key: ${{ matrix.platform }}
 
       - run: npm ci
+
+      # macOS : moteur de lecture mpv (Homebrew) et ses dépendances, embarqués dans l'app.
+      - if: matrix.platform == 'macos'
+        run: |
+          brew install mpv dylibbundler
+          ./scripts/bundle-libmpv-macos.sh
 
       - run: npm run tauri build -- ${{ matrix.args }}
 

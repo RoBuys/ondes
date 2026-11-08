@@ -23,6 +23,7 @@ pub struct ProxyInfo {
 
 struct Inner {
     client: reqwest::Client,
+    log: Option<std::path::PathBuf>,
     port: u16,
     token: String,
 }
@@ -34,17 +35,17 @@ fn random_token() -> Result<String, String> {
 }
 
 /// Démarre le relais et renvoie son port et son jeton.
-pub fn start() -> Result<ProxyInfo, String> {
+pub fn start(log: Option<std::path::PathBuf>) -> Result<ProxyInfo, String> {
     let std_listener = std::net::TcpListener::bind("127.0.0.1:0").map_err(|e| e.to_string())?;
     std_listener.set_nonblocking(true).map_err(|e| e.to_string())?;
     let port = std_listener.local_addr().map_err(|e| e.to_string())?.port();
     let token = random_token()?;
     let client = reqwest::Client::builder()
-        .user_agent("Mozilla/5.0 Ondes/0.1")
+        .user_agent("Mozilla/5.0 Ondes/0.2.0")
         .connect_timeout(std::time::Duration::from_secs(20))
         .build()
         .map_err(|e| e.to_string())?;
-    let state = Arc::new(Inner { client, port, token: token.clone() });
+    let state = Arc::new(Inner { client, log, port, token: token.clone() });
     let app = Router::new().route("/proxy", any(handle)).with_state(state);
 
     tauri::async_runtime::spawn(async move {
@@ -56,6 +57,61 @@ pub fn start() -> Result<ProxyInfo, String> {
         }
     });
     Ok(ProxyInfo { port, token })
+}
+
+impl Inner {
+    /// Consigne une ligne dans le journal de diagnostic de l'app.
+    fn log_line(&self, line: &str) {
+        use std::io::Write;
+        let Some(path) = &self.log else { return };
+        if let Ok(mut f) = std::fs::OpenOptions::new().create(true).append(true).open(path) {
+            let secs = std::time::SystemTime::now().duration_since(std::time::UNIX_EPOCH).map(|d| d.as_secs()).unwrap_or(0);
+            let _ = writeln!(f, "{secs} {line}");
+        }
+    }
+}
+
+/// Erreur réseau détaillée (cause d'origine comprise : DNS, TLS, refus de connexion…).
+fn error_chain(e: &dyn std::error::Error) -> String {
+    let mut s = e.to_string();
+    let mut cur = e.source();
+    while let Some(c) = cur {
+        s.push_str(" / ");
+        s.push_str(&c.to_string());
+        cur = c.source();
+    }
+    s
+}
+
+/// Masque les identifiants Xtream (/live/u/p/…) et les paramètres username/password d'une URL.
+fn redact(u: &str) -> String {
+    let Ok(mut url) = reqwest::Url::parse(u) else { return "(url)".into() };
+    let segs: Vec<String> = url.path_segments().map(|s| s.map(String::from).collect()).unwrap_or_default();
+    let mut out = Vec::with_capacity(segs.len());
+    let mut mask = 0;
+    for s in segs {
+        if mask > 0 {
+            out.push("***".to_string());
+            mask -= 1;
+        } else {
+            if ["live", "movie", "series", "timeshift"].contains(&s.as_str()) {
+                mask = 2;
+            }
+            out.push(s);
+        }
+    }
+    url.set_path(&out.join("/"));
+    let pairs: Vec<(String, String)> = url
+        .query_pairs()
+        .map(|(k, v)| {
+            let hide = ["username", "password", "token"].contains(&k.to_ascii_lowercase().as_str());
+            (k.into_owned(), if hide { "***".into() } else { v.into_owned() })
+        })
+        .collect();
+    if !pairs.is_empty() {
+        url.query_pairs_mut().clear().extend_pairs(pairs);
+    }
+    url.to_string()
 }
 
 fn cors(h: &mut HeaderMap) {
@@ -96,10 +152,18 @@ async fn handle(
     }
     let resp = match req.send().await {
         Ok(r) => r,
-        Err(e) => return plain(StatusCode::BAD_GATEWAY, &e.to_string()),
+        Err(e) => {
+            // without_url : le message d'erreur de reqwest contient sinon l'adresse complète (identifiants compris).
+            let e = e.without_url();
+            st.log_line(&format!("relais erreur {} : {}", redact(url), error_chain(&e)));
+            return plain(StatusCode::BAD_GATEWAY, &e.to_string());
+        }
     };
 
     let status = StatusCode::from_u16(resp.status().as_u16()).unwrap_or(StatusCode::BAD_GATEWAY);
+    if !status.is_success() {
+        st.log_line(&format!("relais HTTP {} {} -> {}", status.as_u16(), redact(url), redact(resp.url().as_str())));
+    }
     let final_url = resp.url().clone();
     let content_type = resp.headers().get(header::CONTENT_TYPE).and_then(|v| v.to_str().ok()).unwrap_or("").to_string();
     let looks_hls = content_type.to_ascii_lowercase().contains("mpegurl") || final_url.path().to_ascii_lowercase().ends_with(".m3u8");
@@ -194,7 +258,7 @@ mod tests {
 
     #[test]
     fn relaie_un_flux_hls() {
-        let info = start().expect("démarrage du relais");
+        let info = start(None).expect("démarrage du relais");
         tauri::async_runtime::block_on(async move {
             let base = format!("http://127.0.0.1:{}/proxy", info.port);
             let c = reqwest::Client::new();

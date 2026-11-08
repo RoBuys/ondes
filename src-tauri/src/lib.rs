@@ -1,3 +1,6 @@
+#[cfg(target_os = "macos")]
+mod mac_render;
+mod mpv;
 mod proxy;
 
 use serde::Serialize;
@@ -117,7 +120,7 @@ async fn run_download(app: &AppHandle, id: &str, url: &str, path: &Path, cancel:
     let offset = tokio::fs::metadata(&part).await.map(|m| m.len()).unwrap_or(0);
 
     let client = reqwest::Client::builder()
-        .user_agent("Mozilla/5.0 Ondes/0.1")
+        .user_agent("Mozilla/5.0 Ondes/0.2.0")
         .connect_timeout(Duration::from_secs(20))
         .build()
         .map_err(|e| e.to_string())?;
@@ -229,6 +232,33 @@ fn reveal(app: AppHandle, path: Option<String>) -> Result<(), String> {
     Ok(())
 }
 
+/// Ajoute une ligne au journal de diagnostic (dossier des journaux de l'app, fichier ondes.log).
+#[tauri::command]
+fn diag_log(app: AppHandle, line: String) {
+    use std::io::Write;
+    let Ok(dir) = app.path().app_log_dir() else { return };
+    let _ = std::fs::create_dir_all(&dir);
+    let path = dir.join("ondes.log");
+    // Le journal est remis à zéro au-delà de 2 Mo.
+    if std::fs::metadata(&path).map(|m| m.len() > 2_000_000).unwrap_or(false) {
+        let _ = std::fs::remove_file(&path);
+    }
+    if let Ok(mut f) = std::fs::OpenOptions::new().create(true).append(true).open(&path) {
+        let secs = std::time::SystemTime::now().duration_since(std::time::UNIX_EPOCH).map(|d| d.as_secs()).unwrap_or(0);
+        let _ = writeln!(f, "{secs} {line}");
+    }
+}
+
+/// Auto-test (versions de développement uniquement) : liste de flux à lire, depuis la variable ONDES_SELFTEST.
+#[tauri::command]
+fn selftest_spec() -> Option<String> {
+    if cfg!(debug_assertions) {
+        std::env::var("ONDES_SELFTEST").ok()
+    } else {
+        None
+    }
+}
+
 /// Relais local (macOS) : port et jeton, ou rien sous Windows où WebView2 n'applique pas le CORS.
 struct ProxyState(Option<proxy::ProxyInfo>);
 
@@ -241,11 +271,16 @@ fn proxy_info(state: State<'_, ProxyState>) -> Option<proxy::ProxyInfo> {
 pub fn run() {
     tauri::Builder::default()
         .manage(Downloads::default())
+        .manage(mpv::MpvState::default())
         .setup(|app| {
             let info = if cfg!(target_os = "windows") {
                 None
             } else {
-                match proxy::start() {
+                let log = app.path().app_log_dir().ok().map(|d| {
+                    let _ = std::fs::create_dir_all(&d);
+                    d.join("ondes.log")
+                });
+                match proxy::start(log) {
                     Ok(i) => Some(i),
                     Err(e) => {
                         eprintln!("relais Ondes indisponible : {e}");
@@ -263,7 +298,16 @@ pub fn run() {
             download_delete,
             file_exists,
             reveal,
-            proxy_info
+            proxy_info,
+            diag_log,
+            selftest_spec,
+            mpv::mpv_init,
+            mpv::mpv_command,
+            mpv::mpv_set,
+            mpv::mpv_get,
+            mpv::mpv_margins,
+            mpv::mpv_tracks,
+            mpv::mpv_debug_views
         ])
         .run(tauri::generate_context!())
         .expect("erreur au lancement d'Ondes");

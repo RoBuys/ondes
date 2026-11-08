@@ -95,6 +95,24 @@ const PATHS: Record<string, ReactNode> = {
   download: <path d="M12 4v11M7 10.5l5 5 5-5M5 20h14" />,
   folder: <path d="M3.5 7.5A2 2 0 0 1 5.5 5.5h4l2 2.5h7a2 2 0 0 1 2 2v7.5a2 2 0 0 1-2 2h-13a2 2 0 0 1-2-2z" />,
   pause: <path d="M8.5 5v14M15.5 5v14" />,
+  volume: (
+    <>
+      <path d="M4 9.5h3.5L12 5.5v13l-4.5-4H4z" />
+      <path d="M15.5 9a4 4 0 0 1 0 6M18 6.5a7.5 7.5 0 0 1 0 11" />
+    </>
+  ),
+  mute: (
+    <>
+      <path d="M4 9.5h3.5L12 5.5v13l-4.5-4H4z" />
+      <path d="M16 9.5l5 5M21 9.5l-5 5" />
+    </>
+  ),
+  subtitles: (
+    <>
+      <rect x="3" y="5" width="18" height="14" rx="2.5" />
+      <path d="M7 13h4M13 13h4M7 16h7" />
+    </>
+  ),
   globe: (
     <>
       <circle cx="12" cy="12" r="8.5" />

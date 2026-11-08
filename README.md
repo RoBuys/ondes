@@ -1,4 +1,4 @@
-# Ondes — lecteur IPTV pour Windows et macOS
+# Ondes — lecteur IPTV pour macOS (Apple Silicon) et Windows
 
 Application de bureau (Tauri 2 + React) pour regarder vos sources IPTV :
 
@@ -6,7 +6,10 @@ Application de bureau (Tauri 2 + React) pour regarder vos sources IPTV :
 - **Direct** : chaînes par groupe, recherche, favoris, zapping au clavier (↑ ↓), programme en cours et à suivre.
 - **Guide** : grille XMLTV sur 12 h (navigation par tranches de 3 h), détectée depuis la playlist (`x-tvg-url`) ou Xtream, ou saisie à la main. Les `.xml.gz` sont gérés.
 - **Films & séries** : catalogues Xtream (fiches détaillées, saisons, épisodes) ou VOD des M3U, reprise de lecture, épisode suivant automatique.
-- **Lecture** : HLS (hls.js), MPEG-TS (mpegts.js) et MP4 natif, avec bascule automatique d'un format à l'autre en cas d'échec.
+- **Lecture (macOS)** : moteur **mpv** embarqué — TNT entrelacée désentrelacée, AC-3, HEVC, pistes audio et sous-titres
+  (DVB compris), plein écran. Réglages → Moteur de lecture permet de revenir au lecteur web.
+- **Lecture (Windows, et repli)** : HLS (hls.js), MPEG-TS (mpegts.js) et MP4 natif, avec bascule automatique d'un format
+  à l'autre en cas d'échec.
 - **Reconnexion intelligente** : en cas de coupure ou d'image figée, le flux est relancé automatiquement (jusqu'à 8 essais,
   délai croissant, reprise immédiate au retour du réseau) ; les films reprennent à la même position.
 - **Recherche globale** : la barre du haut cherche chaînes, films et séries dans toutes les sources à la fois.
@@ -42,6 +45,16 @@ proxy `/__proxy` utilisé automatiquement. Dans l'app Windows, WebView2 est lanc
 Pour lancer l'app Tauri sur le Mac : installez Rust puis `npm run tauri dev`. Sous macOS, WKWebView applique le CORS :
 la partie Rust démarre un relais local (`src-tauri/src/proxy.rs`, 127.0.0.1 + jeton) par lequel passent flux et images.
 Sous Windows, WebView2 est lancé sans CORS et n'en a pas besoin.
+
+## Moteur mpv (macOS)
+
+- `src-tauri/src/mpv.rs` charge libmpv à l'exécution ; `src-tauri/src/mac_render.rs` dessine l'image dans une vue OpenGL
+  placée sous la vue web (API de rendu de mpv). L'interface place l'image sous le lecteur avec `video-margin-ratio-*`.
+- `scripts/bundle-libmpv-macos.sh` copie libmpv de Homebrew et ses dépendances dans `src-tauri/lib/macos`
+  (non versionné), embarquées dans `Ondes.app/Contents/Resources/lib`. Prérequis : `brew install mpv dylibbundler`.
+- `src-tauri/Entitlements.plist` autorise le chargement de ces bibliothèques et le JIT de LuaJIT (runtime renforcé).
+- Diagnostic : journal `~/Library/Logs/com.robertbuys.ondes/ondes.log` ; autotest des versions de développement via
+  la variable `ONDES_SELFTEST` (liste JSON de flux à lire).
 
 ## Structure
 

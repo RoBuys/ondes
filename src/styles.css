@@ -1605,3 +1605,172 @@ p {
     width: 240px;
   }
 }
+
+/* Lecture par mpv : la page laisse voir la vidéo dessinée sous elle dans la fenêtre. */
+html.mpv-on,
+html.mpv-on body {
+  background: transparent;
+}
+
+/* ---------- Lecteur mpv ---------- */
+
+.player.mpv {
+  background: transparent;
+}
+.player.mpv.big {
+  position: fixed;
+  inset: 0;
+  z-index: 60;
+}
+.mpv-hole {
+  position: absolute;
+  inset: 0;
+}
+.player.mpv .player-msg {
+  pointer-events: none;
+}
+.player.mpv .player-msg.error {
+  pointer-events: auto;
+}
+.mpv-controls {
+  position: absolute;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  padding: 26px 14px 10px;
+  background: linear-gradient(transparent, rgba(0, 0, 0, 0.78));
+  color: #fff;
+  transition: opacity 0.25s;
+}
+.player.idle .mpv-controls {
+  opacity: 0;
+  pointer-events: none;
+}
+.mpv-controls .icon-btn {
+  color: #fff;
+}
+.mpv-controls .icon-btn:hover {
+  background: rgba(255, 255, 255, 0.14);
+}
+.mpv-bar {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+.mpv-seek {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  margin-bottom: 4px;
+}
+.mpv-time {
+  font-size: 12.5px;
+  font-variant-numeric: tabular-nums;
+  min-width: 46px;
+  text-align: center;
+}
+.mpv-controls input[type='range'] {
+  -webkit-appearance: none;
+  appearance: none;
+  height: 4px;
+  border-radius: 2px;
+  background: linear-gradient(to right, var(--accent) var(--pct, 0%), rgba(255, 255, 255, 0.25) var(--pct, 0%));
+  cursor: pointer;
+}
+.mpv-seek input[type='range'] {
+  flex: 1;
+}
+.mpv-controls input[type='range']::-webkit-slider-thumb {
+  -webkit-appearance: none;
+  width: 13px;
+  height: 13px;
+  border-radius: 50%;
+  background: #fff;
+  box-shadow: 0 1px 4px rgba(0, 0, 0, 0.5);
+}
+.mpv-volume {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+}
+.mpv-volume input[type='range'] {
+  width: 90px;
+}
+.mpv-live {
+  display: inline-flex;
+  align-items: center;
+  gap: 7px;
+  padding: 0 10px;
+  font-size: 12.5px;
+  font-weight: 650;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+}
+.btn.sm {
+  height: 30px;
+  padding: 0 10px;
+  font-size: 13px;
+  gap: 6px;
+}
+.mpv-controls .btn.ghost {
+  background: rgba(255, 255, 255, 0.12);
+  color: #fff;
+}
+.mpv-controls .btn.ghost.active,
+.mpv-controls .btn.ghost:hover {
+  background: rgba(255, 255, 255, 0.22);
+}
+.mpv-menu-wrap {
+  position: relative;
+}
+.mpv-menu {
+  position: absolute;
+  right: 0;
+  bottom: 38px;
+  min-width: 240px;
+  max-height: 300px;
+  overflow-y: auto;
+  padding: 6px;
+  border-radius: 10px;
+  background: rgba(20, 24, 33, 0.97);
+  border: 1px solid var(--line-2);
+  box-shadow: 0 14px 40px rgba(0, 0, 0, 0.55);
+  display: grid;
+  gap: 2px;
+}
+.mpv-menu button {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 8px 10px 8px 30px;
+  border-radius: 7px;
+  text-align: left;
+  font-size: 13px;
+  color: #dde2ec;
+  position: relative;
+}
+.mpv-menu button svg {
+  position: absolute;
+  left: 9px;
+}
+.mpv-menu button:hover {
+  background: var(--panel-3);
+}
+.mpv-menu button.on {
+  color: var(--accent);
+}
+/* Quand mpv lit, les conteneurs du lecteur laissent voir la vidéo dessinée sous la page. */
+html.mpv-on .app,
+html.mpv-on .main,
+html.mpv-on .content,
+html.mpv-on .stage,
+html.mpv-on .stage-video,
+html.mpv-on .overlay {
+  background: transparent;
+}
+html.mpv-full .app {
+  visibility: hidden;
+}
+html.mpv-full .player.mpv.big {
+  visibility: visible;
+}
