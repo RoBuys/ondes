@@ -8,7 +8,7 @@ export const uid = () => Date.now().toString(36) + Math.random().toString(36).sl
 
 const fold = (s: string) => s.toLowerCase().normalize('NFD').replace(/[̀-ͯ]/g, '');
 
-/** Nom de chaîne normalisé pour rapprocher playlist et guide (« FR: TF1 HD » → « tf1 »). */
+/** Normalized channel name, to match playlist and guide ("FR: TF1 HD" → "tf1"). */
 export function normName(n: string): string {
   return fold(n)
     .replace(/\([^)]*\)|\[[^\]]*\]/g, ' ')
@@ -17,7 +17,7 @@ export function normName(n: string): string {
     .replace(/[^a-z0-9+]/g, '');
 }
 
-/** Renvoie un prédicat de recherche insensible à la casse et aux accents, ou null si la requête est vide. */
+/** Returns a case- and accent-insensitive search predicate, or null if the query is empty. */
 export function makeSearch(q: string): ((s: string) => boolean) | null {
   const f = fold(q.trim());
   return f ? (s: string) => fold(s).includes(f) : null;

@@ -3,7 +3,7 @@ import { listen } from '@tauri-apps/api/event';
 import { isTauri } from './net';
 import { prefs } from './store';
 
-/** Accès au moteur mpv natif (partie Rust, src-tauri/src/mpv.rs). */
+/** Access to the native mpv engine (Rust side, src-tauri/src/mpv.rs). */
 
 export interface MpvTrack {
   id: number | null;
@@ -26,13 +26,13 @@ export type MpvEvent = { event: 'start-file' | 'file-loaded' | 'playback-restart
 let ready: Promise<{ version: string; hwdec: string | null } | null> | null = null;
 let info: { version: string; hwdec: string | null } | null = null;
 
-/** Version de mpv chargée (null si indisponible). */
+/** Loaded mpv version (null if unavailable). */
 export const mpvInfo = () => info;
 
-/** mpv est utilisé si la bibliothèque est chargée et que le réglage ne force pas le lecteur web. */
+/** mpv is used if the library is loaded and the setting does not force the web player. */
 export const mpvEnabled = () => info != null && prefs.settings().engine !== 'web';
 
-/** Démarre mpv une seule fois ; null si libmpv est indisponible (on garde alors le lecteur web). */
+/** Starts mpv only once; null if libmpv is unavailable (the web player is kept). */
 export function mpvInit() {
   if (!isTauri) return Promise.resolve(null);
   ready ??= invoke<{ version: string; hwdec: string | null }>('mpv_init')
@@ -57,8 +57,8 @@ export const mpv = {
   onLog: (fn: (line: string) => void) => subscribe(logSubs, fn),
 };
 
-/* Un seul écouteur Tauri par type d'événement, partagé : mpv émet sa position plusieurs fois par seconde et
-   des écouteurs ajoutés puis retirés à chaque lecture provoqueraient des avertissements en rafale. */
+/* A single shared Tauri listener per event type: mpv reports its position several times per second, and
+   listeners added then removed on every playback would trigger bursts of warnings. */
 type Fn = (...a: never[]) => void;
 const propSubs = new Set<(name: string, value: unknown) => void>();
 const eventSubs = new Set<(e: MpvEvent) => void>();

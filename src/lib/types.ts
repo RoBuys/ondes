@@ -4,20 +4,20 @@ export interface Source {
   id: string;
   name: string;
   kind: SourceKind;
-  /** M3U distante */
+  /** Remote M3U */
   url?: string;
-  /** M3U importée depuis un fichier (contenu stocké en IndexedDB) */
+  /** M3U imported from a file (content stored in IndexedDB) */
   isFile?: boolean;
   /** Xtream Codes */
   server?: string;
   username?: string;
   password?: string;
-  /** Guide XMLTV forcé (sinon celui annoncé par la source) */
+  /** Forced XMLTV guide (otherwise the one advertised by the source) */
   epgUrl?: string;
   createdAt: number;
-  /** Source masquée du sélecteur et de la recherche globale */
+  /** Source hidden from the picker and from global search */
   hidden?: boolean;
-  /** Onglets affichés pour cette source (tous par défaut) */
+  /** Tabs shown for this source (all by default) */
   sections?: Partial<Record<Section, boolean>>;
 }
 
@@ -29,7 +29,7 @@ export interface Channel {
   logo?: string;
   group: string;
   url: string;
-  /** Variante HLS (Xtream) */
+  /** HLS variant (Xtream) */
   altUrl?: string;
   epgId?: string;
   num?: number;
@@ -66,7 +66,7 @@ export interface Show {
   plot?: string;
   rating?: string;
   year?: string;
-  /** Présent pour les séries issues d'une M3U */
+  /** Present for series coming from an M3U playlist */
   episodes?: Episode[];
 }
 
@@ -95,16 +95,16 @@ export interface Programme {
 }
 
 export interface Epg {
-  /** id XMLTV (minuscules) → programmes triés */
+  /** XMLTV id (lowercase) → sorted programmes */
   byId: Record<string, Programme[]>;
-  /** nom normalisé → id XMLTV (minuscules) */
+  /** normalized name → XMLTV id (lowercase) */
   names: Record<string, string>;
   fetchedAt: number;
 }
 
 export interface Settings {
   liveFormat: 'ts' | 'm3u8';
-  /** Moteur de lecture : mpv natif (par défaut s'il est disponible) ou lecteur web. */
+  /** Playback engine: native mpv (default when available) or web player. */
   engine?: 'mpv' | 'web';
 }
 
@@ -117,8 +117,8 @@ export interface PlaySpec {
   resumeKey?: string;
   poster?: string;
   onEnded?: () => void;
-  /** Réglages mpegts.js imposés (autotest uniquement) */
+  /** Forced mpegts.js settings (self-test only) */
   tsOverride?: { isLive?: boolean; config?: Record<string, unknown> };
-  /** Moteur imposé (autotest uniquement) */
+  /** Forced engine (self-test only) */
   forceEngine?: 'hls' | 'ts' | 'native';
 }

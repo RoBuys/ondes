@@ -7,7 +7,7 @@ import { programmesFor } from '../lib/xmltv';
 import { ALL, channelsForGroup, FAV, useLiveGroups } from './Live';
 import { Empty, Icon, Img, Modal, useNow } from './ui';
 
-const PX = 4.5; // pixels par minute
+const PX = 4.5; // pixels per minute
 const ROW = 60;
 const HEAD = 38;
 const LEFT = 210;

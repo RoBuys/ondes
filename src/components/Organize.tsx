@@ -11,7 +11,7 @@ const KINDS: { id: Kind; label: string }[] = [
   { id: 's', label: 'Séries' },
 ];
 
-/** Fenêtre « Organiser » : groupes (visibilité, nom, ordre) et éléments masqués. */
+/** "Organize" window: groups (visibility, name, order) and hidden items. */
 export function OrganizeModal({ onClose, initialKind = 'l' }: { onClose: () => void; initialKind?: Kind | 'lists' }) {
   const { rawCatalog, rules, setRules, active } = useApp();
   const [tab, setTab] = useState<Kind | 'lists'>(initialKind);
@@ -39,7 +39,7 @@ export function OrganizeModal({ onClose, initialKind = 'l' }: { onClose: () => v
 
   const update = (fn: (r: ContentRules) => ContentRules) => setRules(fn(rules));
 
-  /** Fixe l'ordre complet du type courant, en conservant celui des autres types. */
+  /** Sets the full order for the current type, keeping the order of the other types. */
   const setOrder = (keys: string[]) =>
     update((r) => ({ ...r, groupOrder: [...r.groupOrder.filter((k) => !k.startsWith(`${kind}|`)), ...keys] }));
 
@@ -66,7 +66,7 @@ export function OrganizeModal({ onClose, initialKind = 'l' }: { onClose: () => v
       return { ...r, groupNames };
     });
 
-  /** Groupes concernés par les actions groupées : ceux qui correspondent au filtre, ou tous. */
+  /** Groups affected by bulk actions: those matching the filter, or all of them. */
   const shown = groups.filter((g) => !match || match(g.group) || match(rules.groupNames[g.key] ?? ''));
 
   const allVisible = (visible: boolean) =>
@@ -76,7 +76,7 @@ export function OrganizeModal({ onClose, initialKind = 'l' }: { onClose: () => v
       return { ...r, hiddenGroups: visible ? others : [...others, ...keys] };
     });
 
-  /** N'afficher que les groupes filtrés (masque tous les autres groupes de ce type). */
+  /** Show only the filtered groups (hides every other group of this type). */
   const onlyThese = () =>
     update((r) => {
       const keep = new Set(shown.map((g) => g.key));
@@ -251,12 +251,12 @@ export function OrganizeModal({ onClose, initialKind = 'l' }: { onClose: () => v
 export interface ItemTarget {
   id: string;
   name: string;
-  /** Nom dans la playlist, avant personnalisation */
+  /** Name in the playlist, before customization */
   original: string;
   label: string;
 }
 
-/** Fenêtre ouverte par clic droit : renommer ou masquer un élément. */
+/** Window opened by right-click: rename or hide an item. */
 export function ItemModal({ target, onClose }: { target: ItemTarget; onClose: () => void }) {
   const { rules, setRules, favs, toggleFav } = useApp();
   const [name, setName] = useState(target.name);
@@ -320,7 +320,7 @@ export function ItemModal({ target, onClose }: { target: ItemTarget; onClose: ()
 }
 
 
-/** Cases à cocher « dans quelles listes » pour une chaîne, avec création d'une liste. */
+/** "Which lists" checkboxes for a channel, with list creation. */
 export function ListPicker({ channelId }: { channelId: string }) {
   const { lists, setLists } = useApp();
   const [name, setName] = useState('');
@@ -354,7 +354,7 @@ export function ListPicker({ channelId }: { channelId: string }) {
   );
 }
 
-/** Onglet « Mes listes » : renommer, supprimer, réordonner les listes et leurs chaînes. */
+/** "My lists" tab: rename, delete, reorder lists and their channels. */
 function ListsManager() {
   const { lists, setLists, rawCatalog, rules } = useApp();
   const [sel, setSel] = useState<string | null>(lists[0]?.id ?? null);

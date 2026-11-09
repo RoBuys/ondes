@@ -1,4 +1,4 @@
-**Ondes**, lecteur IPTV pour macOS (Apple Silicon) et Windows.
+**Ondes**, lecteur de streams pour macOS (Apple Silicon) et Windows.
 
 ## Fonctions
 

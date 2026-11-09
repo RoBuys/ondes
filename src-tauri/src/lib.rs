@@ -12,7 +12,7 @@ use std::time::{Duration, Instant};
 use tauri::{AppHandle, Emitter, Manager, State};
 use tokio::io::AsyncWriteExt;
 
-/// Téléchargements en cours : identifiant → drapeau d'annulation.
+/// Downloads in progress: id → cancellation flag.
 #[derive(Default)]
 struct Downloads(Mutex<HashMap<String, Arc<AtomicBool>>>);
 
@@ -27,7 +27,7 @@ struct Progress {
     error: Option<String>,
 }
 
-/// Retire les caractères interdits dans les noms de fichiers Windows.
+/// Removes characters that are not allowed in Windows file names.
 fn sanitize(name: &str) -> String {
     let cleaned: String = name
         .chars()
@@ -68,7 +68,7 @@ fn downloads_dir(app: AppHandle) -> Result<String, String> {
     download_dir(&app).map(|p| p.to_string_lossy().into_owned())
 }
 
-/// Démarre (ou reprend) un téléchargement. Renvoie le chemin final du fichier.
+/// Starts (or resumes) a download. Returns the final file path.
 #[tauri::command]
 fn download_start(
     app: AppHandle,
@@ -133,7 +133,7 @@ async fn run_download(app: &AppHandle, id: &str, url: &str, path: &Path, cancel:
     if !status.is_success() {
         return Err(format!("Le serveur a répondu {status}"));
     }
-    // 206 : le serveur reprend là où on s'était arrêté ; sinon on repart de zéro.
+    // 206: the server resumes where we stopped; otherwise we start over.
     let resume = offset > 0 && status == reqwest::StatusCode::PARTIAL_CONTENT;
     let mut received = if resume { offset } else { 0 };
     let total = resp.content_length().map(|l| l + received);
@@ -187,7 +187,7 @@ fn download_cancel(state: State<'_, Downloads>, id: String) {
     }
 }
 
-/// Supprime le fichier (et sa partie incomplète). Limité au dossier de téléchargement d'Ondes.
+/// Deletes the file (and its partial file). Restricted to the Ondes download folder.
 #[tauri::command]
 fn download_delete(app: AppHandle, path: String) -> Result<(), String> {
     let dir = download_dir(&app)?;
@@ -208,7 +208,7 @@ fn file_exists(path: String) -> bool {
     Path::new(&path).is_file()
 }
 
-/// Ouvre l'Explorateur sur le fichier (ou le dossier Ondes).
+/// Opens the file manager on the file (or on the Ondes folder).
 #[tauri::command]
 fn reveal(app: AppHandle, path: Option<String>) -> Result<(), String> {
     let target = match path {
@@ -232,14 +232,14 @@ fn reveal(app: AppHandle, path: Option<String>) -> Result<(), String> {
     Ok(())
 }
 
-/// Ajoute une ligne au journal de diagnostic (dossier des journaux de l'app, fichier ondes.log).
+/// Appends a line to the diagnostic log (app log folder, ondes.log).
 #[tauri::command]
 fn diag_log(app: AppHandle, line: String) {
     use std::io::Write;
     let Ok(dir) = app.path().app_log_dir() else { return };
     let _ = std::fs::create_dir_all(&dir);
     let path = dir.join("ondes.log");
-    // Le journal est remis à zéro au-delà de 2 Mo.
+    // The log is reset once it exceeds 2 MB.
     if std::fs::metadata(&path).map(|m| m.len() > 2_000_000).unwrap_or(false) {
         let _ = std::fs::remove_file(&path);
     }
@@ -249,7 +249,7 @@ fn diag_log(app: AppHandle, line: String) {
     }
 }
 
-/// Auto-test (versions de développement uniquement) : liste de flux à lire, depuis la variable ONDES_SELFTEST.
+/// Self-test (development builds only): list of streams to play, from the ONDES_SELFTEST variable.
 #[tauri::command]
 fn selftest_spec() -> Option<String> {
     if cfg!(debug_assertions) {
@@ -259,7 +259,7 @@ fn selftest_spec() -> Option<String> {
     }
 }
 
-/// Relais local (macOS) : port et jeton, ou rien sous Windows où WebView2 n'applique pas le CORS.
+/// Local relay (macOS): port and token, or nothing on Windows where WebView2 does not enforce CORS.
 struct ProxyState(Option<proxy::ProxyInfo>);
 
 #[tauri::command]

@@ -9,7 +9,7 @@ import { copyText, Icon } from './ui';
 
 const MAX_RECONNECTS = 8;
 
-/** Fichier téléchargé : l'adresse « asset:// » de la vue web est reconvertie en chemin local pour mpv. */
+/** Downloaded file: the web view's "asset://" address is converted back to a local path for mpv. */
 function toMpvUrl(u: string): string {
   const m = /^(?:asset:\/\/localhost|https?:\/\/asset\.localhost)\/(.+)$/.exec(u);
   return m ? decodeURIComponent(m[1]) : u;
@@ -43,8 +43,8 @@ interface Status {
 }
 
 /**
- * Lecteur natif mpv : la vidéo est dessinée sous la page, dans le rectangle de cet élément
- * (ou toute la fenêtre en plein écran). Contrôles, pistes et reconnexion sont gérés ici.
+ * Native mpv player: the video is drawn below the page, inside this element's rectangle
+ * (or the whole window in full screen). Controls, tracks and reconnection are handled here.
  */
 export function MpvPlayer({ spec, mode, onClose }: { spec: PlaySpec; mode: 'inline' | 'overlay'; onClose?: () => void }) {
   const hole = useRef<HTMLDivElement>(null);
@@ -68,7 +68,7 @@ export function MpvPlayer({ spec, mode, onClose }: { spec: PlaySpec; mode: 'inli
   const live = spec.live;
   const big = fullscreen || mode === 'overlay';
 
-  /* Placement de l'image : marges de mpv calculées à partir du rectangle de l'élément. */
+  /* Picture placement: mpv margins computed from the element's rectangle. */
   const place = useCallback(() => {
     const el = hole.current;
     if (!el) return;
@@ -101,7 +101,7 @@ export function MpvPlayer({ spec, mode, onClose }: { spec: PlaySpec; mode: 'inli
     };
   }, [place, big]);
 
-  /* Arrêt et nettoyage au démontage. */
+  /* Stop and clean up on unmount. */
   useEffect(
     () => () => {
       mpv.command('stop').catch(() => {});
@@ -111,14 +111,14 @@ export function MpvPlayer({ spec, mode, onClose }: { spec: PlaySpec; mode: 'inli
     [],
   );
 
-  /* Plein écran / lecteur de films : fond noir et reste de l'interface masqué (la vidéo est sous toute la page). */
+  /* Full screen / movie player: black background and the rest of the UI hidden (the video is below the whole page). */
   useEffect(() => {
     mpv.set('background-color', big ? '#000000' : '#0d0f14').catch(() => {});
     document.documentElement.classList.toggle('mpv-full', big);
     return () => document.documentElement.classList.remove('mpv-full');
   }, [big]);
 
-  /* Chargement, reconnexion et passage à l'adresse suivante. */
+  /* Loading, reconnection and fallback to the next address. */
   useEffect(() => {
     let disposed = false;
     const urls = spec.urls.map(toMpvUrl);
@@ -156,7 +156,7 @@ export function MpvPlayer({ spec, mode, onClose }: { spec: PlaySpec; mode: 'inli
       diag('mpv échec', why);
       window.clearTimeout(stableTimer);
       if (playing && !live && timeRef.current != null) resumeAt = timeRef.current;
-      // Coupure en cours de lecture : on relance l'adresse qui fonctionnait.
+      // Dropped while playing: reload the address that was working.
       if (playing && reconnects < MAX_RECONNECTS) {
         reconnects++;
         playing = false;
@@ -202,7 +202,7 @@ export function MpvPlayer({ spec, mode, onClose }: { spec: PlaySpec; mode: 'inli
               if (typeof value === 'number') {
                 setTime(value);
                 timeRef.current = value;
-                // Position enregistrée toutes les 5 s (films et épisodes).
+                // Position saved every 5 s (movies and episodes).
                 const d = durationRef.current;
                 if (!live && spec.resumeKey && d && value > 5 && value < d - 30 && Date.now() - savedAt.current > 5000) {
                   savedAt.current = Date.now();
@@ -239,7 +239,7 @@ export function MpvPlayer({ spec, mode, onClose }: { spec: PlaySpec; mode: 'inli
       load(0);
     })();
 
-    // Flux figé (direct) : la position n'avance plus alors que la lecture est en cours.
+    // Frozen stream (live): the position no longer moves while playback is running.
     const watchdog = window.setInterval(async () => {
       if (disposed || !playing) return;
       const [pos, pausedNow] = await Promise.all([mpv.get('time-pos'), mpv.get('pause')]);
@@ -283,14 +283,14 @@ export function MpvPlayer({ spec, mode, onClose }: { spec: PlaySpec; mode: 'inli
     await getCurrentWindow().setFullscreen(next).catch(() => {});
   }, [fullscreen]);
 
-  /* Raccourcis clavier. */
+  /* Keyboard shortcuts. */
   useEffect(() => {
     const onKey = (e: KeyboardEvent) => {
       const t = e.target as HTMLElement;
       if (t && (t.tagName === 'INPUT' || t.tagName === 'TEXTAREA' || t.tagName === 'SELECT')) return;
       if (e.key === 'Escape') {
         if (!menu && !fullscreen && mode !== 'overlay') return;
-        // Empêche la fiche film/série située dessous de se fermer en même temps.
+        // Prevents the movie/series page underneath from closing at the same time.
         e.stopImmediatePropagation();
         if (menu) setMenu(null);
         else if (fullscreen) toggleFullscreen();

@@ -2,9 +2,9 @@ import { prefs } from './store';
 import type { Catalog } from './types';
 
 /**
- * Personnalisation d'une source : groupes masqués, renommés, réordonnés ; éléments masqués ou renommés.
- * Les clés de groupe sont préfixées par le type : « l| » chaînes, « m| » films, « s| » séries.
- * Renommer deux groupes avec le même nom les fusionne.
+ * Per-source customization: hidden, renamed, reordered groups; hidden or renamed items.
+ * Group keys are prefixed with the type: "l|" channels, "m|" movies, "s|" series.
+ * Giving two groups the same name merges them.
  */
 export interface ContentRules {
   hiddenGroups: string[];
@@ -70,7 +70,7 @@ export function applyRules(cat: Catalog, r: ContentRules): Catalog {
   };
 }
 
-/** Groupes bruts d'un type, dans l'ordre effectif (ordre personnalisé d'abord). */
+/** Raw groups of a type, in effective order (custom order first). */
 export function rawGroups(cat: Catalog, kind: Kind, r: ContentRules) {
   const list = kind === 'l' ? cat.live : kind === 'm' ? cat.movies : cat.series;
   const counts = new Map<string, number>();

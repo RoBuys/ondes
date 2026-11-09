@@ -1,11 +1,12 @@
 import { defineConfig, type Plugin } from 'vite';
 import react from '@vitejs/plugin-react';
 import { Readable } from 'node:stream';
+import pkg from './package.json' with { type: 'json' };
 
 /**
- * Proxy de développement uniquement (navigateur sur le Mac).
- * Dans l'app Windows, WebView2 est lancé sans restriction CORS : aucun proxy n'est utilisé.
- * Les manifestes HLS sont réécrits pour que leurs segments passent aussi par le proxy.
+ * Development-only proxy (browser on the Mac).
+ * In the Windows app, WebView2 runs without CORS restrictions: no proxy is used.
+ * HLS manifests are rewritten so that their segments also go through the proxy.
  */
 function devProxy(): Plugin {
   return {
@@ -75,6 +76,7 @@ function devProxy(): Plugin {
 
 export default defineConfig({
   plugins: [react(), devProxy()],
+  define: { __APP_VERSION__: JSON.stringify(pkg.version) },
   clearScreen: false,
   server: { port: 1420, strictPort: true },
   build: { target: 'chrome110', chunkSizeWarningLimit: 2000 },

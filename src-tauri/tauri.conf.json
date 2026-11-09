@@ -40,8 +40,8 @@
     "active": true,
     "targets": "all",
     "category": "Video",
-    "shortDescription": "Lecteur IPTV",
-    "longDescription": "Ondes lit vos playlists IPTV (M3U, Xtream Codes) avec guide des programmes, films et séries.",
+    "shortDescription": "Lecteur de streams",
+    "longDescription": "Ondes lit vos playlists de streams (M3U, Xtream Codes) avec guide des programmes, films et séries.",
     "icon": [
       "icons/32x32.png",
       "icons/128x128.png",

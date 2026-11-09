@@ -6,7 +6,7 @@ import { nowAndNext, programmesFor, progressOf } from '../lib/xmltv';
 import { Empty, Icon, Img, useNow } from './ui';
 import { MovieDetail, PosterCard, ShowDetail } from './Vod';
 
-/** Onglet « Favoris » : chaînes, films et séries marqués d'une étoile, pour la source active. */
+/** "Favorites" tab: starred channels, movies and series of the active source. */
 export function FavoritesView() {
   const { catalog, favs, toggleFav, epg, setLiveSel, setView } = useApp();
   const [movie, setMovie] = useState<Movie | null>(null);

@@ -1,7 +1,7 @@
 import { invoke } from '@tauri-apps/api/core';
 import { isTauri } from './net';
 
-/** Masque identifiants et jetons dans une URL (chemins Xtream /live/u/p/…, paramètres username/password/t). */
+/** Masks credentials and tokens in a URL (Xtream /live/u/p/… paths, username/password/t parameters). */
 export function redact(u: string): string {
   try {
     const decoded = u.includes('/proxy?') ? decodeURIComponent(u.split('url=')[1] ?? u) : u;
@@ -14,8 +14,8 @@ export function redact(u: string): string {
 }
 
 /**
- * Journal de diagnostic du lecteur. Dans l'app, écrit aussi dans le fichier journal
- * (macOS : ~/Library/Logs/com.robertbuys.ondes/ondes.log, Windows : %LOCALAPPDATA%\com.robertbuys.ondes\logs\ondes.log).
+ * Player diagnostic log. In the app, also written to the log file
+ * (macOS: ~/Library/Logs/com.robertbuys.ondes/ondes.log, Windows: %LOCALAPPDATA%\com.robertbuys.ondes\logs\ondes.log).
  */
 export function diag(...parts: unknown[]) {
   const line = parts.map((p) => (typeof p === 'string' ? p : JSON.stringify(p))).join(' ');
@@ -25,7 +25,7 @@ export function diag(...parts: unknown[]) {
 
 let envLogged = false;
 
-/** Capacités média du moteur web, journalisées une fois au premier lancement du lecteur. */
+/** Media capabilities of the web engine, logged once when the player first starts. */
 export function logEnvironment(extra: Record<string, unknown>) {
   if (envLogged) return;
   envLogged = true;

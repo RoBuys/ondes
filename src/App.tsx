@@ -72,7 +72,7 @@ export default function App() {
     setListsState(l);
   }, []);
 
-  /* Onglets affichés pour la source active ; on quitte un onglet masqué. */
+  /* Tabs shown for the active source; leave a tab that has been hidden. */
   const sectionOn = (s: Section) => active?.sections?.[s] !== false;
   const nav = NAV.filter((n) => sectionOn(n.id));
   useEffect(() => {
@@ -438,7 +438,7 @@ function Welcome() {
           <Logo size={56} />
           <div>
             <h1>Bienvenue dans Ondes</h1>
-            <p className="muted">Ajoutez votre playlist IPTV pour commencer : lien M3U, fichier ou identifiants Xtream Codes.</p>
+            <p className="muted">Ajoutez votre playlist de streams pour commencer : lien M3U, fichier ou identifiants Xtream Codes.</p>
           </div>
         </div>
         <AddSourceForm />
@@ -452,7 +452,7 @@ function Welcome() {
               await addSource({ id: uid(), createdAt: Date.now(), kind: 'm3u', name: DEMO_SOURCE.name, url: DEMO_SOURCE.url });
             }}
           >
-            Essayer avec les chaînes gratuites d’iptv-org
+            Essayer avec des chaînes gratuites
           </button>
         </div>
       </div>

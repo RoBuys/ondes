@@ -121,7 +121,7 @@ export function DownloadsView() {
   );
 }
 
-/** Bouton « Télécharger » à l'état du téléchargement (fiches films et épisodes). */
+/** "Download" button reflecting the download state (movie and episode pages). */
 export function DownloadButton({
   id,
   compact,

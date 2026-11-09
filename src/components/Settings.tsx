@@ -16,7 +16,7 @@ import { Icon } from './ui';
 type Tab = 'url' | 'file' | 'xtream';
 
 export const DEMO_SOURCE = {
-  name: 'Chaînes gratuites (iptv-org, France)',
+  name: 'Chaînes gratuites (France)',
   url: 'https://iptv-org.github.io/iptv/countries/fr.m3u',
 };
 
@@ -371,7 +371,7 @@ export function SettingsView() {
           </div>
         </div>
         <p className="muted small about">
-          Ondes 0.1.0 — lecteur IPTV. Ondes ne fournit aucune chaîne : utilisez uniquement des sources auxquelles vous avez légalement accès.
+          Ondes {__APP_VERSION__} — lecteur de streams. Ondes ne fournit aucune chaîne : utilisez uniquement des sources auxquelles vous avez légalement accès.
         </p>
       </section>
     </div>

@@ -1,6 +1,6 @@
-# Ondes — lecteur IPTV pour macOS (Apple Silicon) et Windows
+# Ondes — lecteur de streams pour macOS (Apple Silicon) et Windows
 
-Application de bureau (Tauri 2 + React) pour regarder vos sources IPTV :
+Application de bureau (Tauri 2 + React) pour regarder vos sources de streams :
 
 - **Sources** : lien M3U, fichier M3U importé, compte **Xtream Codes** (plusieurs sources possibles).
 - **Direct** : chaînes par groupe, recherche, favoris, zapping au clavier (↑ ↓), programme en cours et à suivre.
@@ -41,7 +41,7 @@ npm install
 npm run dev      # http://localhost:1420
 ```
 
-Dans un navigateur classique, les serveurs IPTV bloquent les requêtes (CORS) : le serveur de dev Vite fournit un
+Dans un navigateur classique, les serveurs de streams bloquent les requêtes (CORS) : le serveur de dev Vite fournit un
 proxy `/__proxy` utilisé automatiquement. Dans l'app Windows, WebView2 est lancé avec `--disable-web-security`
 (voir `src-tauri/tauri.conf.json`), donc aucun proxy n'est nécessaire.
 

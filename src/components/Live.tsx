@@ -31,7 +31,7 @@ export function useLiveGroups(live: Channel[], favs: Set<string>, lists: Channel
   }, [live, favs, lists]);
 }
 
-/** Chaînes d'un groupe : Favoris, une liste personnelle, toutes, ou un groupe de la playlist. */
+/** Channels of a group: Favorites, a personal list, all, or a playlist group. */
 export function channelsForGroup(live: Channel[], group: string, favs: Set<string>, lists: ChannelList[]): Channel[] {
   if (group === FAV) return live.filter((c) => favs.has(c.id));
   if (group === ALL) return live;
@@ -68,7 +68,7 @@ export function LiveView() {
   const sel = liveSel ? byId.get(liveSel) : undefined;
   const selIndex = sel ? list.indexOf(sel) : -1;
 
-  /* Zapping au clavier : ↑ ↓ */
+  /* Keyboard zapping: ↑ ↓ */
   useEffect(() => {
     if (overlay) return;
     const onKey = (e: KeyboardEvent) => {

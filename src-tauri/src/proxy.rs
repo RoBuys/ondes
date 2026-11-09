@@ -1,9 +1,9 @@
-//! Relais HTTP local (127.0.0.1) utilisé sur macOS.
+//! Local HTTP relay (127.0.0.1) used on macOS.
 //!
-//! WKWebView applique le CORS et bloque le contenu http depuis l'app : les serveurs IPTV, qui n'envoient
-//! pas d'en-têtes CORS, y seraient inaccessibles. L'interface passe donc par ce relais, qui récupère
-//! la ressource côté Rust. Les manifestes HLS sont réécrits pour que leurs segments passent aussi par ici.
-//! Un jeton aléatoire empêche d'autres pages web de la machine de s'en servir.
+//! WKWebView enforces CORS and blocks http content from the app: stream servers, which do not send
+//! CORS headers, would be unreachable. The UI therefore goes through this relay, which fetches
+//! the resource on the Rust side. HLS manifests are rewritten so that their segments also go through it.
+//! A random token prevents other web pages on the machine from using it.
 
 use axum::body::Body;
 use axum::extract::{Query, State};
@@ -34,7 +34,7 @@ fn random_token() -> Result<String, String> {
     Ok(buf.iter().map(|b| format!("{b:02x}")).collect())
 }
 
-/// Démarre le relais et renvoie son port et son jeton.
+/// Starts the relay and returns its port and token.
 pub fn start(log: Option<std::path::PathBuf>) -> Result<ProxyInfo, String> {
     let std_listener = std::net::TcpListener::bind("127.0.0.1:0").map_err(|e| e.to_string())?;
     std_listener.set_nonblocking(true).map_err(|e| e.to_string())?;
@@ -60,7 +60,7 @@ pub fn start(log: Option<std::path::PathBuf>) -> Result<ProxyInfo, String> {
 }
 
 impl Inner {
-    /// Consigne une ligne dans le journal de diagnostic de l'app.
+    /// Writes a line to the app's diagnostic log.
     fn log_line(&self, line: &str) {
         use std::io::Write;
         let Some(path) = &self.log else { return };
@@ -71,7 +71,7 @@ impl Inner {
     }
 }
 
-/// Erreur réseau détaillée (cause d'origine comprise : DNS, TLS, refus de connexion…).
+/// Detailed network error (including the root cause: DNS, TLS, connection refused…).
 fn error_chain(e: &dyn std::error::Error) -> String {
     let mut s = e.to_string();
     let mut cur = e.source();
@@ -83,7 +83,7 @@ fn error_chain(e: &dyn std::error::Error) -> String {
     s
 }
 
-/// Masque les identifiants Xtream (/live/u/p/…) et les paramètres username/password d'une URL.
+/// Masks Xtream credentials (/live/u/p/…) and username/password parameters in a URL.
 fn redact(u: &str) -> String {
     let Ok(mut url) = reqwest::Url::parse(u) else { return "(url)".into() };
     let segs: Vec<String> = url.path_segments().map(|s| s.map(String::from).collect()).unwrap_or_default();
@@ -153,7 +153,7 @@ async fn handle(
     let resp = match req.send().await {
         Ok(r) => r,
         Err(e) => {
-            // without_url : le message d'erreur de reqwest contient sinon l'adresse complète (identifiants compris).
+            // without_url: otherwise reqwest's error message contains the full address (credentials included).
             let e = e.without_url();
             st.log_line(&format!("relais erreur {} : {}", redact(url), error_chain(&e)));
             return plain(StatusCode::BAD_GATEWAY, &e.to_string());
@@ -222,7 +222,7 @@ fn rewrite_hls(text: &str, base: &reqwest::Url, port: u16, token: &str) -> Strin
         .join("\n")
 }
 
-/// Réécrit les attributs URI="…" (clés de chiffrement, pistes audio, sous-titres…).
+/// Rewrites URI="…" attributes (encryption keys, audio tracks, subtitles…).
 fn rewrite_uri_attrs(line: &str, prox: &dyn Fn(&str) -> String) -> String {
     let mut out = String::with_capacity(line.len());
     let mut rest = line;
@@ -263,11 +263,11 @@ mod tests {
             let base = format!("http://127.0.0.1:{}/proxy", info.port);
             let c = reqwest::Client::new();
 
-            // Sans jeton : refusé.
+            // Without token: rejected.
             let r = c.get(format!("{base}?url=https://example.com")).send().await.unwrap();
             assert_eq!(r.status().as_u16(), 403);
 
-            // Manifeste HLS : réécrit vers le relais, avec CORS.
+            // HLS manifest: rewritten to point at the relay, with CORS.
             let src = "https://test-streams.mux.dev/x36xhzz/x36xhzz.m3u8";
             let r = c.get(format!("{base}?t={}&url={}", info.token, urlencode(src))).send().await.unwrap();
             assert!(r.status().is_success());
@@ -278,7 +278,7 @@ mod tests {
             let media = c.get(&variant).send().await.unwrap().text().await.unwrap();
             let seg = media.lines().find(|l| l.starts_with("http://127.0.0.1")).expect("segment réécrit").to_string();
 
-            // Segment avec Range : 206 et octets transmis.
+            // Segment with Range: 206 and bytes forwarded.
             let r = c.get(&seg).header("range", "bytes=0-1023").send().await.unwrap();
             assert_eq!(r.status().as_u16(), 206);
             assert!(r.headers().contains_key("content-range"));

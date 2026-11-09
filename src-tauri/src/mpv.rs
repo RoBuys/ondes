@@ -1,8 +1,8 @@
-//! Moteur de lecture mpv.
+//! mpv playback engine.
 //!
-//! libmpv est chargée à l'exécution (dlopen) : si elle est absente, l'app reste utilisable avec le lecteur web.
-//! La vidéo est dessinée par mpv directement dans la fenêtre de l'app (option `wid`), sous la page web rendue
-//! transparente ; l'interface place l'image sous la zone du lecteur avec les marges `video-margin-ratio-*`.
+//! libmpv is loaded at runtime (dlopen): if it is missing, the app still works with the web player.
+//! The video is drawn by mpv directly into the app window (`wid` option), below the web page made
+//! transparent; the UI positions the picture under the player area with the `video-margin-ratio-*` margins.
 
 use libloading::Library;
 use serde::Serialize;
@@ -55,7 +55,7 @@ struct MpvEventLogMessage {
     text: *const c_char,
 }
 
-/// Fonctions de libmpv utilisées par Ondes.
+/// libmpv functions used by Ondes.
 pub struct Api {
     _lib: Library,
     path: PathBuf,
@@ -71,7 +71,7 @@ pub struct Api {
     free: unsafe extern "C" fn(*mut c_void),
     error_string: unsafe extern "C" fn(c_int) -> *const c_char,
     request_log_messages: unsafe extern "C" fn(Handle, *const c_char) -> c_int,
-    // API de rendu (macOS)
+    // Render API (macOS)
     #[allow(dead_code)]
     pub render_context_create: unsafe extern "C" fn(*mut *mut c_void, Handle, *mut c_void) -> c_int,
     #[allow(dead_code)]
@@ -122,7 +122,7 @@ impl Api {
     }
 }
 
-/// Instance mpv (l'API libmpv est utilisable depuis plusieurs threads).
+/// mpv instance (the libmpv API can be used from several threads).
 pub struct Mpv {
     api: Arc<Api>,
     h: Handle,
@@ -182,7 +182,7 @@ fn cstr(s: &str) -> Result<CString, String> {
     CString::new(s).map_err(|_| "caractère nul".to_string())
 }
 
-/// Propriétés envoyées à l'interface à chaque changement.
+/// Properties sent to the UI whenever they change.
 const OBSERVED: &[(&str, c_int)] = &[
     ("time-pos", FORMAT_DOUBLE),
     ("duration", FORMAT_DOUBLE),
@@ -204,15 +204,15 @@ const OBSERVED: &[(&str, c_int)] = &[
 #[derive(Default)]
 pub struct MpvState {
     inner: Mutex<Option<Arc<Mpv>>>,
-    /// Moteur de rendu OpenGL (macOS), conservé pour toute la durée de l'app.
+    /// OpenGL renderer (macOS), kept for the whole lifetime of the app.
     #[allow(dead_code)]
     renderer: Mutex<Option<usize>>,
-    /// Emplacements essayés sans succès avant la bibliothèque chargée (diagnostic).
+    /// Locations tried unsuccessfully before the library that was loaded (diagnostics).
     skipped: Mutex<Vec<String>>,
     api: Mutex<Option<Arc<Api>>>,
 }
 
-/// Emplacements possibles de libmpv : dossier de ressources de l'app, à côté de l'exécutable, puis installation système.
+/// Possible libmpv locations: the app's resource folder, next to the executable, then system installs.
 fn candidates<R: Runtime>(app: &AppHandle<R>) -> Vec<PathBuf> {
     let names: &[&str] = if cfg!(target_os = "windows") {
         &["libmpv-2.dll", "mpv-2.dll"]
@@ -236,7 +236,7 @@ fn candidates<R: Runtime>(app: &AppHandle<R>) -> Vec<PathBuf> {
             dirs.push(d.join("lib"));
         }
     }
-    // Développement : bibliothèques préparées dans src-tauri/lib/<plateforme>.
+    // Development: libraries prepared in src-tauri/lib/<platform>.
     dirs.push(PathBuf::from(env!("CARGO_MANIFEST_DIR")).join("lib").join(std::env::consts::OS));
     if cfg!(target_os = "macos") {
         dirs.push(PathBuf::from("/opt/homebrew/lib"));
@@ -277,7 +277,7 @@ fn load_api<R: Runtime>(app: &AppHandle<R>, state: &MpvState) -> Result<Arc<Api>
     Err(if errors.is_empty() { "libmpv introuvable".into() } else { errors.join(" ; ") })
 }
 
-/// Identifiant natif de la fenêtre, transmis à mpv (`wid`) : NSView sous macOS, HWND sous Windows.
+/// Native window handle passed to mpv (`wid`): NSView on macOS, HWND on Windows.
 fn window_id<R: Runtime>(window: &WebviewWindow<R>) -> Result<i64, String> {
     #[cfg(target_os = "macos")]
     {
@@ -315,7 +315,7 @@ fn start<R: Runtime>(app: &AppHandle<R>, window: &WebviewWindow<R>, state: &MpvS
     let mpv = Mpv { api: api.clone(), h };
     let wid = window_id(window)?;
 
-    // Options de base : pas de configuration utilisateur, pas de raccourcis ni d'interface mpv (l'app fournit les siens).
+    // Base options: no user config, no mpv key bindings or UI (the app provides its own).
     let opts: &[(&str, &str)] = &[
         ("config", "no"),
         ("load-scripts", "no"),
@@ -347,8 +347,8 @@ fn start<R: Runtime>(app: &AppHandle<R>, window: &WebviewWindow<R>, state: &MpvS
     for (k, v) in opts {
         mpv.set_option(k, v)?;
     }
-    // Scripts intégrés de mpv (statistiques, console, menus…) : inutiles ici. Certains n'existent pas
-    // dans toutes les versions, d'où les erreurs ignorées.
+    // mpv built-in scripts (stats, console, menus…): not needed here. Some do not exist
+    // in every version, hence the ignored errors.
     for k in [
         "load-stats-overlay",
         "load-console",
@@ -361,7 +361,7 @@ fn start<R: Runtime>(app: &AppHandle<R>, window: &WebviewWindow<R>, state: &MpvS
     ] {
         let _ = mpv.set_option(k, "no");
     }
-    // macOS : rendu par l'API de rendu dans une vue de l'app ; ailleurs, mpv dessine dans la fenêtre (wid).
+    // macOS: render API into an app view; elsewhere, mpv draws into the window (wid).
     if cfg!(target_os = "macos") {
         mpv.set_option("vo", "libmpv")?;
         let _ = wid;
@@ -369,7 +369,7 @@ fn start<R: Runtime>(app: &AppHandle<R>, window: &WebviewWindow<R>, state: &MpvS
         mpv.set_option("vo", "gpu-next,gpu,")?;
         mpv.set_option("wid", &wid.to_string())?;
     }
-    // Désentrelacement automatique des flux TNT (1080i) ; « auto » n'existe que dans les versions récentes.
+    // Automatic deinterlacing of broadcast TV streams (1080i); "auto" only exists in recent versions.
     if mpv.set_option("deinterlace", "auto").is_err() {
         let _ = mpv.set_option("deinterlace", "no");
     }
@@ -383,8 +383,8 @@ fn start<R: Runtime>(app: &AppHandle<R>, window: &WebviewWindow<R>, state: &MpvS
         mpv.observe(i as u64 + 1, name, *fmt);
     }
 
-    // macOS : la fenêtre reste opaque ; la vue web cesse de peindre son fond et une vue OpenGL, placée
-    // dessous, reçoit l'image de mpv. Création sur le fil principal (AppKit et OpenGL).
+    // macOS: the window stays opaque; the web view stops painting its background and an OpenGL view placed
+    // below it receives mpv's picture. Created on the main thread (AppKit and OpenGL).
     #[cfg(target_os = "macos")]
     {
         let (tx, rx) = std::sync::mpsc::channel::<Result<usize, String>>();
@@ -418,11 +418,11 @@ fn start<R: Runtime>(app: &AppHandle<R>, window: &WebviewWindow<R>, state: &MpvS
     Ok(mpv)
 }
 
-/// Fil d'événements : propriétés observées, début/fin de lecture, messages d'erreur.
+/// Event thread: observed properties, playback start/end, error messages.
 fn spawn_events<R: Runtime>(app: AppHandle<R>, mpv: Arc<Mpv>) {
     let api = mpv.api.clone();
     let h = mpv.h as usize;
-    // Le fil ne garde pas l'instance en vie : mpv_terminate_destroy (Drop) le réveille avec SHUTDOWN.
+    // The thread does not keep the instance alive: mpv_terminate_destroy (Drop) wakes it up with SHUTDOWN.
     drop(mpv);
     std::thread::spawn(move || loop {
         let ev = unsafe { &*(api.wait_event)(h as Handle, -1.0) };
@@ -457,7 +457,7 @@ fn spawn_events<R: Runtime>(app: AppHandle<R>, mpv: Arc<Mpv>) {
             }
             EVENT_END_FILE => {
                 let e = unsafe { &*(ev.data as *const MpvEventEndFile) };
-                // reason : 0 fin normale, 2 arrêt, 3 quitter, 4 erreur, 5 remplacé par un autre fichier.
+                // reason: 0 normal end, 2 stopped, 3 quit, 4 error, 5 replaced by another file.
                 let reason = match e.reason {
                     0 => "eof",
                     2 => "stop",
@@ -486,8 +486,8 @@ fn spawn_events<R: Runtime>(app: AppHandle<R>, mpv: Arc<Mpv>) {
     });
 }
 
-/// Commande asynchrone : elle s'exécute hors du fil principal, que mpv sollicite pendant son initialisation
-/// sous macOS (une commande synchrone bloquerait l'app).
+/// Async command: it runs off the main thread, which mpv needs during its initialization
+/// on macOS (a synchronous command would freeze the app).
 #[tauri::command]
 pub async fn mpv_init<R: Runtime>(app: AppHandle<R>, window: WebviewWindow<R>, state: State<'_, MpvState>) -> Result<InitInfo, String> {
     let mpv = start(&app, &window, &state)?;
@@ -518,7 +518,7 @@ pub async fn mpv_get(state: State<'_, MpvState>, name: String) -> Result<Option<
     Ok(current(&state)?.get(&name))
 }
 
-/// Place l'image dans la fenêtre : marges en fraction de la taille de la fenêtre (0 à 1).
+/// Positions the picture in the window: margins as a fraction of the window size (0 to 1).
 #[tauri::command]
 pub async fn mpv_margins(state: State<'_, MpvState>, left: f64, right: f64, top: f64, bottom: f64) -> Result<(), String> {
     let mpv = current(&state)?;
@@ -529,7 +529,7 @@ pub async fn mpv_margins(state: State<'_, MpvState>, left: f64, right: f64, top:
     mpv.set("video-margin-ratio-bottom", &format!("{:.5}", clamp(bottom)))
 }
 
-/// Pistes audio et sous-titres du fichier en cours.
+/// Audio and subtitle tracks of the current file.
 #[tauri::command]
 pub async fn mpv_tracks(state: State<'_, MpvState>) -> Result<Value, String> {
     let mpv = current(&state)?;
@@ -550,7 +550,7 @@ pub async fn mpv_tracks(state: State<'_, MpvState>) -> Result<Value, String> {
     Ok(Value::Array(out))
 }
 
-/// Diagnostic (macOS) : ordre des vues de la fenêtre, pour vérifier que la vidéo est bien sous la page web.
+/// Diagnostics (macOS): window view order, to check that the video is below the web page.
 #[tauri::command]
 pub async fn mpv_debug_views<R: Runtime>(window: WebviewWindow<R>) -> Result<Vec<String>, String> {
     let (tx, rx) = std::sync::mpsc::channel();

@@ -6,7 +6,7 @@ import type { Catalog, Epg, PlaySpec, Settings, Source } from './lib/types';
 
 export type View = 'live' | 'guide' | 'movies' | 'series' | 'favorites' | 'downloads' | 'search' | 'settings';
 
-/** Élément à ouvrir dès que le catalogue de sa source est chargé (depuis la recherche globale). */
+/** Item to open as soon as its source's catalog is loaded (from global search). */
 export interface PendingOpen {
   kind: 'movie' | 'show';
   id: string;
@@ -32,14 +32,14 @@ export interface AppCtx {
   updateSource: (s: Source) => void;
   removeSource: (id: string) => Promise<void>;
 
-  /** Catalogue personnalisé (groupes masqués, renommés…) : celui qu'affichent les vues. */
+  /** Customized catalog (hidden, renamed groups…): the one the views display. */
   catalog: Catalog | null;
-  /** Catalogue tel que fourni par la source. */
+  /** Catalog as provided by the source. */
   rawCatalog: Catalog | null;
   rules: ContentRules;
   setRules: (r: ContentRules) => void;
   organize: (kind?: Kind | 'lists') => void;
-  /** Ouvre la fenêtre « renommer / masquer » d'une chaîne, d'un film ou d'une série. */
+  /** Opens the "rename / hide" window for a channel, movie or series. */
   editItem: (id: string, label: string) => void;
   status: Status;
   refresh: () => void;
@@ -54,7 +54,7 @@ export interface AppCtx {
   favs: Set<string>;
   toggleFav: (id: string) => void;
 
-  /** Listes de chaînes de la source active */
+  /** Channel lists of the active source */
   lists: ChannelList[];
   setLists: (l: ChannelList[]) => void;
 

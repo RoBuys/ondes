@@ -24,7 +24,7 @@ function kindOf(url: string): Engine | 'unknown' {
   return 'unknown';
 }
 
-/** Ordre d'essai des moteurs pour un flux : on bascule au suivant en cas d'échec. */
+/** Order in which engines are tried for a stream: we switch to the next one on failure. */
 function attemptsFor(urls: string[], live: boolean): Attempt[] {
   const out: Attempt[] = [];
   for (const url of urls) {
@@ -40,7 +40,7 @@ function attemptsFor(urls: string[], live: boolean): Attempt[] {
   return out;
 }
 
-/** Secondes de données disponibles après la position courante. */
+/** Seconds of data available after the current position. */
 function bufferedAhead(v: HTMLVideoElement): number {
   const t = v.currentTime;
   for (let i = 0; i < v.buffered.length; i++) {
@@ -52,13 +52,13 @@ function bufferedAhead(v: HTMLVideoElement): number {
 interface State {
   loading: boolean;
   error?: string;
-  /** Numéro de la tentative de reconnexion en cours */
+  /** Number of the reconnection attempt in progress */
   reconnecting?: number;
 }
 
 const MAX_RECONNECTS = 8;
 
-/** Lecteur : mpv natif quand il est disponible, sinon le lecteur web (hls.js / mpegts.js). */
+/** Player: native mpv when available, otherwise the web player (hls.js / mpegts.js). */
 export function Player(props: { spec: PlaySpec; mode: 'inline' | 'overlay'; onClose?: () => void }) {
   const forced = props.spec.forceEngine || props.spec.tsOverride;
   return mpvEnabled() && !forced ? <MpvPlayer {...props} /> : <WebPlayer {...props} />;
@@ -82,7 +82,7 @@ function WebPlayer({
   const hideTimer = useRef<number>(undefined);
   const urlsKey = spec.urls.join('|');
 
-  /* Moteur de lecture, avec reconnexion automatique */
+  /* Playback engine, with automatic reconnection */
   useEffect(() => {
     const v = videoRef.current!;
     const attempts = spec.forceEngine ? spec.urls.map((url) => ({ url, engine: spec.forceEngine! })) : attemptsFor(spec.urls, spec.live);
@@ -108,7 +108,7 @@ function WebPlayer({
         try {
           destroy();
         } catch {
-          /* ignoré */
+          /* ignored */
         }
         destroy = null;
       }
@@ -117,7 +117,7 @@ function WebPlayer({
         try {
           v.load();
         } catch {
-          /* ignoré */
+          /* ignored */
         }
       }
     };
@@ -136,10 +136,10 @@ function WebPlayer({
       if (hadPlayed && !spec.live && v.currentTime > 1) resumeAt = v.currentTime;
       window.clearTimeout(stableTimer);
       teardown();
-      // Erreur de décodage : relancer la même source ne servirait à rien, on passe au moteur suivant.
+      // Decode error: reloading the same source would not help, switch to the next engine.
       const decode = /code 3|decode|MSEError|MediaError/i.test(why);
       if (decode && t + 1 < attempts.length) return run(t + 1);
-      // Coupure en cours de lecture : on relance la source qui fonctionnait, avec un délai croissant.
+      // Dropped while playing: reload the source that was working, with an increasing delay.
       if (hadPlayed && !decode && reconnects < MAX_RECONNECTS) return scheduleReconnect();
       if (!hadPlayed && t + 1 < attempts.length) return run(t + 1);
       token = -1;
@@ -221,8 +221,8 @@ function WebPlayer({
       if (token >= 0) {
         hadPlayed = true;
         working = token;
-        // Le compteur de reconnexions n'est remis à zéro qu'après 30 s de lecture stable,
-        // sinon un flux qui démarre puis échoue aussitôt serait relancé indéfiniment.
+        // The reconnection counter is only reset after 30 s of stable playback,
+        // otherwise a stream that starts then fails right away would be reloaded forever.
         window.clearTimeout(stableTimer);
         stableTimer = window.setTimeout(() => (reconnects = 0), 30000);
       }
@@ -247,7 +247,7 @@ function WebPlayer({
       fail(token, `Format non pris en charge (code ${err.code})`);
     };
 
-    // Détection de flux figé : l'image ne progresse plus alors que la lecture est en cours.
+    // Frozen stream detection: the picture no longer moves while playback is running.
     let nudges = 0;
     const watchdog = window.setInterval(() => {
       if (token < 0 || v.paused || v.ended || v.seeking) {
@@ -261,8 +261,8 @@ function WebPlayer({
         nudges = 0;
       }
       lastT = v.currentTime;
-      // WebKit (macOS) : l'horloge média reste parfois bloquée au début alors que les données sont là.
-      // Un petit saut en avant la relance.
+      // WebKit (macOS): the media clock sometimes stays stuck at the start even though the data is there.
+      // A small jump forward restarts it.
       if (frozenFor >= 2 && nudges < 3 && v.readyState >= 3 && bufferedAhead(v) > 0.5) {
         nudges++;
         frozenFor = 0;
@@ -273,7 +273,7 @@ function WebPlayer({
       if (hadPlayed && frozenFor >= (spec.live ? 12 : 20)) fail(token, 'flux figé');
     }, 1000);
 
-    // Retour du réseau : on n'attend pas la fin du délai.
+    // Network is back: no need to wait for the delay to expire.
     const onOnline = () => {
       if (token === -2) {
         window.clearTimeout(retryTimer);
@@ -306,7 +306,7 @@ function WebPlayer({
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [spec.key, urlsKey, spec.live, retry]);
 
-  /* Reprise de lecture et fin */
+  /* Resume and end of playback */
   useEffect(() => {
     const v = videoRef.current!;
     const key = spec.resumeKey;
@@ -341,7 +341,7 @@ function WebPlayer({
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [spec.key]);
 
-  /* Volume mémorisé */
+  /* Remembered volume */
   useEffect(() => {
     const v = videoRef.current!;
     v.volume = Math.max(0, Math.min(1, prefs.volume()));
@@ -355,13 +355,13 @@ function WebPlayer({
     else wrap.current?.requestFullscreen().catch(() => {});
   }, []);
 
-  /* Raccourcis clavier (lecteur plein écran) */
+  /* Keyboard shortcuts (full-screen player) */
   useEffect(() => {
     if (mode !== 'overlay') return;
     const onKey = (e: KeyboardEvent) => {
       const v = videoRef.current!;
       if (e.key === 'Escape') {
-        // Empêche la fiche film/série située dessous de se fermer en même temps.
+        // Prevents the movie/series page underneath from closing at the same time.
         e.stopImmediatePropagation();
         if (!document.fullscreenElement) onClose?.();
       } else if (e.key === 'f' || e.key === 'F') {

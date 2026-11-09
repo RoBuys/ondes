@@ -1,15 +1,15 @@
-/** Vrai dans l'app Tauri (WebView2 sous Windows). */
+/** True in the Tauri app (WebView2 on Windows). */
 export const isTauri = typeof window !== 'undefined' && '__TAURI_INTERNALS__' in window;
 
 /**
- * En développement dans un navigateur classique, les serveurs IPTV n'envoient pas d'en-têtes CORS :
- * on passe par le proxy de Vite. Dans l'app, WebView2 est lancé sans restriction CORS.
+ * In development, in a regular browser, stream servers do not send CORS headers:
+ * we go through Vite's proxy. In the app, WebView2 runs without CORS restrictions.
  */
 const useProxy = import.meta.env.DEV && !isTauri;
 
 /**
- * Sur macOS, WKWebView applique le CORS et bloque le contenu http : l'app passe par un relais local
- * démarré par la partie Rust (127.0.0.1, protégé par un jeton). Préfixe des URL relayées, ou null.
+ * On macOS, WKWebView enforces CORS and blocks http content: the app goes through a local relay
+ * started by the Rust side (127.0.0.1, protected by a token). Prefix of relayed URLs, or null.
  */
 let nativeProxy: string | null = null;
 
@@ -20,22 +20,22 @@ export async function initNet() {
     const info = await invoke<{ port: number; token: string } | null>('proxy_info');
     if (info) nativeProxy = `http://127.0.0.1:${info.port}/proxy?t=${info.token}&url=`;
   } catch {
-    /* relais indisponible : accès direct */
+    /* relay unavailable: direct access */
   }
 }
 
 const isHttp = (u: string) => /^https?:\/\//i.test(u);
 
-/** URL à utiliser pour les requêtes réseau (fetch, hls.js, mpegts.js). */
+/** URL to use for network requests (fetch, hls.js, mpegts.js). */
 export const proxied = (u: string) => {
   if (!isHttp(u)) return u;
   if (nativeProxy) return nativeProxy + encodeURIComponent(u);
-  // URL absolue : mpegts.js charge les flux depuis un Web Worker, qui ne résout pas les chemins relatifs.
+  // Absolute URL: mpegts.js loads streams from a Web Worker, which does not resolve relative paths.
   if (useProxy) return `${location.origin}/__proxy?url=${encodeURIComponent(u)}`;
   return u;
 };
 
-/** URL pour <video src> et <img src> : relayée seulement là où c'est nécessaire (macOS). */
+/** URL for <video src> and <img src>: relayed only where needed (macOS). */
 export const mediaSrc = (u: string) => (nativeProxy && isHttp(u) ? nativeProxy + encodeURIComponent(u) : u);
 
 export async function fetchBytes(url: string, signal?: AbortSignal): Promise<Uint8Array> {

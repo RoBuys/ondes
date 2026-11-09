@@ -119,7 +119,7 @@ p {
   background: transparent;
 }
 
-/* ---------- Boutons ---------- */
+/* ---------- Buttons ---------- */
 
 .btn {
   display: inline-flex;
@@ -426,7 +426,7 @@ p {
   color: var(--muted);
 }
 
-/* Groupes */
+/* Groups */
 .groups {
   overflow-y: auto;
   padding: 10px 8px;
@@ -477,7 +477,7 @@ p {
   letter-spacing: 0.02em;
 }
 
-/* ---------- Direct ---------- */
+/* ---------- Live ---------- */
 
 .live {
   height: 100%;
@@ -670,7 +670,7 @@ p {
   white-space: nowrap;
 }
 
-/* ---------- Lecteur ---------- */
+/* ---------- Player ---------- */
 
 .player {
   position: relative;
@@ -909,7 +909,7 @@ p {
   pointer-events: none;
 }
 
-/* ---------- Films & séries ---------- */
+/* ---------- Movies & series ---------- */
 
 .vod {
   height: 100%;
@@ -1011,7 +1011,7 @@ p {
   height: 4px;
 }
 
-/* ---------- Modales ---------- */
+/* ---------- Modals ---------- */
 
 .modal-back {
   position: fixed;
@@ -1165,7 +1165,7 @@ p {
   width: min(560px, 100%);
 }
 
-/* ---------- Formulaires et réglages ---------- */
+/* ---------- Forms and settings ---------- */
 
 .add-form {
   display: grid;
@@ -1337,7 +1337,7 @@ p {
   margin-top: 6px;
 }
 
-/* ---------- Accueil ---------- */
+/* ---------- Welcome ---------- */
 
 .welcome {
   height: 100%;
@@ -1395,7 +1395,7 @@ p {
   font-size: 13px;
 }
 
-/* ---------- Organisation ---------- */
+/* ---------- Organize ---------- */
 
 .group.manage {
   color: var(--faint);
@@ -1477,7 +1477,7 @@ p {
   width: min(560px, 100%);
 }
 
-/* ---------- Recherche globale ---------- */
+/* ---------- Global search ---------- */
 
 .global-search {
   width: 320px;
@@ -1518,7 +1518,7 @@ p {
   border-color: var(--line-2);
 }
 
-/* ---------- Téléchargements ---------- */
+/* ---------- Downloads ---------- */
 
 .rail-btn {
   position: relative;
@@ -1620,13 +1620,13 @@ p {
   }
 }
 
-/* Lecture par mpv : la page laisse voir la vidéo dessinée sous elle dans la fenêtre. */
+/* mpv playback: the page lets the video drawn below it in the window show through. */
 html.mpv-on,
 html.mpv-on body {
   background: transparent;
 }
 
-/* ---------- Lecteur mpv ---------- */
+/* ---------- mpv player ---------- */
 
 .player.mpv {
   background: transparent;
@@ -1773,7 +1773,7 @@ html.mpv-on body {
 .mpv-menu button.on {
   color: var(--accent);
 }
-/* Quand mpv lit, les conteneurs du lecteur laissent voir la vidéo dessinée sous la page. */
+/* While mpv plays, the player's containers let the video drawn below the page show through. */
 html.mpv-on .app,
 html.mpv-on .main,
 html.mpv-on .content,
@@ -1789,7 +1789,7 @@ html.mpv-full .player.mpv.big {
   visibility: visible;
 }
 
-/* ---------- Favoris ---------- */
+/* ---------- Favorites ---------- */
 
 .favorites {
   height: 100%;
@@ -1827,7 +1827,7 @@ html.mpv-full .player.mpv.big {
   opacity: 1;
 }
 
-/* ---------- Listes de chaînes ---------- */
+/* ---------- Channel lists ---------- */
 
 .list-picker {
   display: grid;

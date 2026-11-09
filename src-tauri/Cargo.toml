@@ -1,7 +1,7 @@
 [package]
 name = "ondes"
 version = "0.3.0"
-description = "Ondes — lecteur IPTV pour Windows"
+description = "Ondes — stream player for macOS and Windows"
 edition = "2021"
 
 [lib]

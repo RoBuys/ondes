@@ -1,7 +1,7 @@
 import type { Channel, Epg, Programme } from './types';
 import { normName } from './util';
 
-/** « 20261108203000 +0100 » → timestamp ms */
+/** "20261108203000 +0100" → timestamp in ms */
 export function parseXmltvDate(s: string): number {
   const m = /^(\d{4})(\d{2})(\d{2})(\d{2})(\d{2})(\d{2})?\s*([+-]\d{4})?/.exec(s.trim());
   if (!m) return NaN;
@@ -34,8 +34,8 @@ function attr(a: string, name: string): string | undefined {
 }
 
 /**
- * Analyse un guide XMLTV en ne gardant que les chaînes de la playlist et la fenêtre [from, to].
- * Les guides font souvent plusieurs dizaines de Mo : on filtre au plus tôt.
+ * Parses an XMLTV guide, keeping only the playlist's channels and the [from, to] window.
+ * Guides are often tens of MB: we filter as early as possible.
  */
 export function parseXmltv(text: string, channels: Channel[], from: number, to: number): Epg {
   const names: Record<string, string> = {};
@@ -81,7 +81,7 @@ export function parseXmltv(text: string, channels: Channel[], from: number, to: 
     byId[id] = list.filter((p, i) => i === 0 || p.start >= list[i - 1].start + 60000);
   }
 
-  // On ne garde dans l'index des noms que ce qui a des programmes.
+  // Only names that have programmes are kept in the name index.
   const usedNames: Record<string, string> = {};
   for (const [n, id] of Object.entries(names)) if (byId[id]) usedNames[n] = id;
 

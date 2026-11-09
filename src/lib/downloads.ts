@@ -54,7 +54,7 @@ export function fmtBytes(n?: number) {
 export function useDownloads() {
   const [items, setItems] = useState<Record<string, Download>>(() => {
     const saved = prefs.get<Record<string, Download>>('downloads', {});
-    // Au redémarrage, un téléchargement interrompu est mis en pause (il reprendra là où il s'était arrêté).
+    // On restart, an interrupted download is paused (it will resume where it stopped).
     for (const d of Object.values(saved)) if (d.status === 'downloading') d.status = 'paused';
     return saved;
   });
@@ -65,7 +65,7 @@ export function useDownloads() {
 
   useEffect(() => prefs.set('downloads', items), [items]);
 
-  /* Événements de progression envoyés par la partie Rust */
+  /* Progress events sent by the Rust side */
   useEffect(() => {
     if (!isTauri) return;
     invoke<string>('downloads_dir').then(setDir).catch(() => {});
@@ -92,7 +92,7 @@ export function useDownloads() {
     };
   }, []);
 
-  /* Vérifie que les fichiers terminés existent toujours */
+  /* Checks that completed files still exist */
   useEffect(() => {
     if (!isTauri) return;
     for (const d of Object.values(itemsRef.current)) {
@@ -103,7 +103,7 @@ export function useDownloads() {
     }
   }, []);
 
-  /* File d'attente : un seul téléchargement à la fois (limite de connexions des abonnements IPTV) */
+  /* Queue: one download at a time (streaming subscriptions often limit simultaneous connections) */
   useEffect(() => {
     if (!isTauri) return;
     const list = Object.values(items);

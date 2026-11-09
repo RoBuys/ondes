@@ -158,7 +158,7 @@ export function Logo({ size = 30 }: { size?: number }) {
   );
 }
 
-/** Image distante avec repli sur les initiales. */
+/** Remote image falling back to the initials. */
 export function Img({ src, alt, className }: { src?: string; alt: string; className?: string }) {
   const [broken, setBroken] = useState(false);
   useEffect(() => setBroken(false), [src]);
@@ -186,7 +186,7 @@ export function Img({ src, alt, className }: { src?: string; alt: string; classN
   );
 }
 
-/** Liste virtualisée à hauteur de ligne fixe (playlists de plusieurs dizaines de milliers d'entrées). */
+/** Virtualized list with a fixed row height (playlists with tens of thousands of entries). */
 export function VirtualList<T>({
   items,
   rowHeight,

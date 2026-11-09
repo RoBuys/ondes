@@ -13,7 +13,7 @@ interface Hit<T> {
   sourceId: string;
 }
 
-/** Recherche dans les catalogues de toutes les sources (ceux déjà chargés au moins une fois). */
+/** Searches the catalogs of every source (those loaded at least once). */
 export function SearchView({ query, onDone }: { query: string; onDone: () => void }) {
   const { sources, rawCatalog, setActiveId, setLiveSel, setView, setPendingOpen } = useApp();
   const [cats, setCats] = useState<Record<string, Catalog>>({});

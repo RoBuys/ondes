@@ -43,7 +43,7 @@ jobs:
 
       - run: npm ci
 
-      # macOS : moteur de lecture mpv (Homebrew) et ses dépendances, embarqués dans l'app.
+      # macOS: mpv playback engine (Homebrew) and its dependencies, bundled into the app.
       - if: matrix.platform == 'macos'
         run: |
           brew install mpv dylibbundler

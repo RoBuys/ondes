@@ -16,7 +16,7 @@ function lsSet(k: string, v: unknown) {
   try {
     localStorage.setItem(P + k, JSON.stringify(v));
   } catch {
-    /* stockage plein ou indisponible */
+    /* storage full or unavailable */
   }
 }
 
@@ -35,7 +35,7 @@ export const prefs = {
   set: lsSet,
 };
 
-/* Positions de lecture (films, épisodes) */
+/* Playback positions (movies, episodes) */
 export interface Position {
   t: number;
   d: number;
@@ -63,7 +63,7 @@ export function clearPosition(key: string) {
   lsSet('positions', all);
 }
 
-/* Données volumineuses : IndexedDB */
+/* Large data: IndexedDB */
 export const db = {
   catalog: (id: string) => get<Catalog>(`cat:${id}`).catch(() => undefined),
   setCatalog: (c: Catalog) => set(`cat:${c.sourceId}`, c).catch(() => {}),

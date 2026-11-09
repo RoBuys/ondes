@@ -145,7 +145,7 @@ export function PosterCard({ item, onOpen, label }: { item: Item; onOpen: () => 
   );
 }
 
-/* ---------------- Films ---------------- */
+/* ---------------- Movies ---------------- */
 
 export function MoviesView() {
   const { catalog, pendingOpen, setPendingOpen } = useApp();
@@ -268,7 +268,7 @@ export function MovieDetail({ movie, onClose }: { movie: Movie; onClose: () => v
   );
 }
 
-/* ---------------- Séries ---------------- */
+/* ---------------- Series ---------------- */
 
 export function SeriesView() {
   const { catalog, pendingOpen, setPendingOpen } = useApp();

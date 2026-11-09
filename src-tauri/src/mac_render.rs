@@ -1,7 +1,7 @@
-//! macOS : mpv dessine dans une NSOpenGLView placée sous la vue web, via l'API de rendu de libmpv.
+//! macOS: mpv draws into an NSOpenGLView placed below the web view, through libmpv's render API.
 //!
-//! L'option `wid` est ignorée par mpv sur macOS (il ouvre alors sa propre fenêtre) : on utilise donc la même
-//! méthode que les lecteurs Mac (IINA…). Toutes les opérations OpenGL et AppKit ont lieu sur le fil principal.
+//! mpv ignores the `wid` option on macOS (it opens its own window instead), so we use the same
+//! approach as native Mac players (IINA…). All OpenGL and AppKit work happens on the main thread.
 
 use objc2::msg_send;
 use objc2::runtime::{AnyClass, AnyObject, Bool};
@@ -52,7 +52,7 @@ extern "C" fn get_proc_address(_ctx: *mut c_void, name: *const c_char) -> *mut c
     }
 }
 
-/// Programme le rendu d'une image sur le fil principal.
+/// Schedules rendering of a frame on the main thread.
 pub type Schedule = Box<dyn Fn(Box<dyn FnOnce() + Send>) + Send + Sync>;
 
 pub struct GlRenderer {
@@ -68,7 +68,7 @@ pub struct GlRenderer {
 unsafe impl Send for GlRenderer {}
 unsafe impl Sync for GlRenderer {}
 
-/// Appelé par mpv (n'importe quel fil) quand une nouvelle image est prête : on la dessine sur le fil principal.
+/// Called by mpv (from any thread) when a new frame is ready: we draw it on the main thread.
 extern "C" fn on_update(data: *mut c_void) {
     let r = unsafe { &*(data as *const GlRenderer) };
     if r.pending.swap(true, Ordering::AcqRel) {
@@ -79,9 +79,9 @@ extern "C" fn on_update(data: *mut c_void) {
 }
 
 impl GlRenderer {
-    /// Crée la vue OpenGL sous la vue web et le contexte de rendu mpv. À appeler sur le fil principal.
+    /// Creates the OpenGL view below the web view and the mpv render context. Must be called on the main thread.
     ///
-    /// `parent` : vue de contenu de la fenêtre ; `webview` : la WKWebView (la vidéo est placée juste dessous).
+    /// `parent`: the window's content view; `webview`: the WKWebView (the video sits right below it).
     pub unsafe fn create(
         api: Arc<Api>,
         mpv: *mut c_void,
@@ -91,7 +91,7 @@ impl GlRenderer {
     ) -> Result<*const GlRenderer, String> {
         let pf_cls = AnyClass::get(c"NSOpenGLPixelFormat").ok_or("NSOpenGLPixelFormat absent")?;
         let view_cls = AnyClass::get(c"NSOpenGLView").ok_or("NSOpenGLView absent")?;
-        // Profil OpenGL 3.2 Core, double tampon, accéléré, couleurs 24 bits.
+        // OpenGL 3.2 Core profile, double buffered, accelerated, 24-bit color.
         let attrs: [u32; 9] = [99, 0x3200, 5, 73, 8, 24, 11, 8, 0];
         let pf: *mut AnyObject = msg_send![pf_cls, alloc];
         let pf: *mut AnyObject = msg_send![pf, initWithAttributes: attrs.as_ptr()];
@@ -105,9 +105,9 @@ impl GlRenderer {
             return Err("vue OpenGL non créée".into());
         }
         let _: () = msg_send![view, setWantsBestResolutionOpenGLSurface: Bool::YES];
-        // Suit la taille de la fenêtre (largeur et hauteur variables).
+        // Follows the window size (flexible width and height).
         let _: () = msg_send![view, setAutoresizingMask: 18usize];
-        // Sous la vue web (NSWindowBelow = -1).
+        // Below the web view (NSWindowBelow = -1).
         let _: () = msg_send![parent, addSubview: view, positioned: -1isize, relativeTo: webview];
 
         let glctx: *mut AnyObject = msg_send![view, openGLContext];
@@ -115,7 +115,7 @@ impl GlRenderer {
             return Err("contexte OpenGL absent".into());
         }
         let _: () = msg_send![glctx, makeCurrentContext];
-        // Pas d'attente de synchronisation verticale : le fil principal ne doit pas être bloqué.
+        // No vsync wait: the main thread must not be blocked.
         let swap: c_int = 0;
         let _: () = msg_send![glctx, setValues: &swap as *const c_int, forParameter: 222isize];
 

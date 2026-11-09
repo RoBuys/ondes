@@ -11,21 +11,21 @@ export interface SelfTestItem {
   seconds?: number;
   tsOverride?: PlaySpec['tsOverride'];
   forceEngine?: PlaySpec['forceEngine'];
-  /** Lire avec mpv natif ; chemin de capture d'écran facultatif */
+  /** Play with native mpv; optional screenshot path */
   mpv?: boolean;
   shot?: string;
 }
 
 /**
- * Auto-test du lecteur (versions de développement, variable ONDES_SELFTEST) :
- * lit chaque flux pendant quelques secondes et consigne le résultat dans le journal.
+ * Player self-test (development builds, ONDES_SELFTEST variable):
+ * plays each stream for a few seconds and writes the result to the log.
  */
 export function SelfTest({ items }: { items: SelfTestItem[] }) {
   const [i, setI] = useState(0);
   const box = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
-    // Les erreurs et avertissements des moteurs de lecture vont aussi au journal.
+    // Playback engine errors and warnings also go to the log.
     const origErr = console.error;
     const origWarn = console.warn;
     console.error = (...a: unknown[]) => (diag('console.error', ...a.map(String)), origErr(...a));
@@ -36,7 +36,7 @@ export function SelfTest({ items }: { items: SelfTestItem[] }) {
     };
   }, []);
 
-  /* Autotest mpv : moteur natif, marges, propriétés et ordre des vues de la fenêtre */
+  /* mpv self-test: native engine, margins, properties and window view order */
   useEffect(() => {
     const it = items[i];
     if (!it?.mpv) return;
