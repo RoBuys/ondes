@@ -136,7 +136,9 @@ export function MpvPlayer({ spec, mode, onClose }: { spec: PlaySpec; mode: 'inli
     const saved = !live && spec.resumeKey ? getPosition(spec.resumeKey) : undefined;
     if (saved && saved.t > 30 && (!saved.d || saved.t < saved.d - 60)) resumeAt = saved.t;
 
+    let loadAt = 0;
     const load = (i: number) => {
+      loadAt = performance.now();
       if (disposed) return;
       index = i;
       playing = false;
@@ -174,7 +176,7 @@ export function MpvPlayer({ spec, mode, onClose }: { spec: PlaySpec; mode: 'inli
         await mpv.onEvent((e) => {
           if (disposed) return;
           if (e.event === 'playback-restart') {
-            if (!playing) diag('mpv lecture démarrée');
+            if (!playing) diag('mpv lecture démarrée', `${Math.round(performance.now() - loadAt)} ms`);
             playing = true;
             mpv.set('start', 'none').catch(() => {});
             window.clearTimeout(stableTimer);

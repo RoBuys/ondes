@@ -1,4 +1,5 @@
 import { useEffect, useRef, useState } from 'react';
+import { invoke } from '@tauri-apps/api/core';
 import { diag } from '../lib/diag';
 import { mpv, mpvInit } from '../lib/mpv';
 import type { PlaySpec } from '../lib/types';
@@ -20,6 +21,18 @@ export interface SelfTestItem {
  * Player self-test (development builds, ONDES_SELFTEST variable):
  * plays each stream for a few seconds and writes the result to the log.
  */
+/** Event-loop lag: how late a 100 ms timer fires (UI responsiveness in the web view). */
+const lag = { sum: 0, n: 0, max: 0 };
+let lagLast = performance.now();
+window.setInterval(() => {
+  const now = performance.now();
+  const d = Math.max(0, now - lagLast - 100);
+  lagLast = now;
+  lag.sum += d;
+  lag.n += 1;
+  lag.max = Math.max(lag.max, d);
+}, 100);
+
 export function SelfTest({ items }: { items: SelfTestItem[] }) {
   const [i, setI] = useState(0);
   const box = useRef<HTMLDivElement>(null);
@@ -77,8 +90,11 @@ export function SelfTest({ items }: { items: SelfTestItem[] }) {
     }
     const it = items[i];
     diag('autotest', i, it.title);
-    const t = window.setTimeout(() => {
+    const t = window.setTimeout(async () => {
       const v = box.current?.querySelector('video');
+      const stats = await invoke('mpv_stats').catch(() => null);
+      diag('autotest perf', it.title, { ...(stats as object), lagAvgMs: Math.round(lag.sum / Math.max(1, lag.n)), lagMaxMs: Math.round(lag.max) });
+      lag.sum = lag.n = lag.max = 0;
       diag('autotest bilan', it.title, {
         currentTime: v?.currentTime,
         readyState: v?.readyState,

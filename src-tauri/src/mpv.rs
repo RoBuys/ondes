@@ -14,6 +14,12 @@ use tauri::{AppHandle, Emitter, Manager, Runtime, State, WebviewWindow};
 
 type Handle = *mut c_void;
 
+/// Performance counters (diagnostics): property events sent to the UI, frames rendered on the main thread.
+pub static PROP_EVENTS: std::sync::atomic::AtomicU64 = std::sync::atomic::AtomicU64::new(0);
+pub static RENDER_FRAMES: std::sync::atomic::AtomicU64 = std::sync::atomic::AtomicU64::new(0);
+pub static RENDER_MICROS: std::sync::atomic::AtomicU64 = std::sync::atomic::AtomicU64::new(0);
+pub static RENDER_MAX_MICROS: std::sync::atomic::AtomicU64 = std::sync::atomic::AtomicU64::new(0);
+
 const FORMAT_STRING: c_int = 1;
 const FORMAT_FLAG: c_int = 3;
 const FORMAT_INT64: c_int = 4;
@@ -75,7 +81,8 @@ pub struct Api {
     #[allow(dead_code)]
     pub render_context_create: unsafe extern "C" fn(*mut *mut c_void, Handle, *mut c_void) -> c_int,
     #[allow(dead_code)]
-    pub render_context_set_update_callback: unsafe extern "C" fn(*mut c_void, extern "C" fn(*mut c_void), *mut c_void),
+    pub render_context_set_update_callback:
+        unsafe extern "C" fn(*mut c_void, extern "C" fn(*mut c_void), *mut c_void),
     #[allow(dead_code)]
     pub render_context_update: unsafe extern "C" fn(*mut c_void) -> u64,
     #[allow(dead_code)]
@@ -90,7 +97,8 @@ impl Api {
             let lib = Library::new(path).map_err(|e| format!("{} : {e}", path.display()))?;
             macro_rules! sym {
                 ($name:literal) => {
-                    *lib.get(concat!($name, "\0").as_bytes()).map_err(|e| format!("{} : {e}", $name))?
+                    *lib.get(concat!($name, "\0").as_bytes())
+                        .map_err(|e| format!("{} : {e}", $name))?
                 };
             }
             Ok(Api {
@@ -118,7 +126,11 @@ impl Api {
     }
 
     pub fn err(&self, code: c_int) -> String {
-        unsafe { CStr::from_ptr((self.error_string)(code)).to_string_lossy().into_owned() }
+        unsafe {
+            CStr::from_ptr((self.error_string)(code))
+                .to_string_lossy()
+                .into_owned()
+        }
     }
 }
 
@@ -135,13 +147,21 @@ impl Mpv {
     fn set_option(&self, name: &str, value: &str) -> Result<(), String> {
         let (n, v) = (cstr(name)?, cstr(value)?);
         let r = unsafe { (self.api.set_option_string)(self.h, n.as_ptr(), v.as_ptr()) };
-        if r < 0 { Err(format!("{name}={value} : {}", self.api.err(r))) } else { Ok(()) }
+        if r < 0 {
+            Err(format!("{name}={value} : {}", self.api.err(r)))
+        } else {
+            Ok(())
+        }
     }
 
     pub fn set(&self, name: &str, value: &str) -> Result<(), String> {
         let (n, v) = (cstr(name)?, cstr(value)?);
         let r = unsafe { (self.api.set_property_string)(self.h, n.as_ptr(), v.as_ptr()) };
-        if r < 0 { Err(format!("{name} : {}", self.api.err(r))) } else { Ok(()) }
+        if r < 0 {
+            Err(format!("{name} : {}", self.api.err(r)))
+        } else {
+            Ok(())
+        }
     }
 
     pub fn get(&self, name: &str) -> Option<String> {
@@ -162,7 +182,15 @@ impl Mpv {
         let mut ptrs: Vec<*const c_char> = owned.iter().map(|c| c.as_ptr()).collect();
         ptrs.push(std::ptr::null());
         let r = unsafe { (self.api.command)(self.h, ptrs.as_mut_ptr()) };
-        if r < 0 { Err(format!("{} : {}", args.first().map(String::as_str).unwrap_or(""), self.api.err(r))) } else { Ok(()) }
+        if r < 0 {
+            Err(format!(
+                "{} : {}",
+                args.first().map(String::as_str).unwrap_or(""),
+                self.api.err(r)
+            ))
+        } else {
+            Ok(())
+        }
     }
 
     fn observe(&self, id: u64, name: &str, format: c_int) {
@@ -237,7 +265,11 @@ fn candidates<R: Runtime>(app: &AppHandle<R>) -> Vec<PathBuf> {
         }
     }
     // Development: libraries prepared in src-tauri/lib/<platform>.
-    dirs.push(PathBuf::from(env!("CARGO_MANIFEST_DIR")).join("lib").join(std::env::consts::OS));
+    dirs.push(
+        PathBuf::from(env!("CARGO_MANIFEST_DIR"))
+            .join("lib")
+            .join(std::env::consts::OS),
+    );
     if cfg!(target_os = "macos") {
         dirs.push(PathBuf::from("/opt/homebrew/lib"));
         dirs.push(PathBuf::from("/usr/local/lib"));
@@ -274,14 +306,21 @@ fn load_api<R: Runtime>(app: &AppHandle<R>, state: &MpvState) -> Result<Arc<Api>
             Err(e) => errors.push(e),
         }
     }
-    Err(if errors.is_empty() { "libmpv introuvable".into() } else { errors.join(" ; ") })
+    Err(if errors.is_empty() {
+        "libmpv introuvable".into()
+    } else {
+        errors.join(" ; ")
+    })
 }
 
 /// Native window handle passed to mpv (`wid`): NSView on macOS, HWND on Windows.
 fn window_id<R: Runtime>(window: &WebviewWindow<R>) -> Result<i64, String> {
     #[cfg(target_os = "macos")]
     {
-        return window.ns_view().map(|p| p as i64).map_err(|e| e.to_string());
+        return window
+            .ns_view()
+            .map(|p| p as i64)
+            .map_err(|e| e.to_string());
     }
     #[cfg(target_os = "windows")]
     {
@@ -303,7 +342,11 @@ pub struct InitInfo {
     hwdec: Option<String>,
 }
 
-fn start<R: Runtime>(app: &AppHandle<R>, window: &WebviewWindow<R>, state: &MpvState) -> Result<Arc<Mpv>, String> {
+fn start<R: Runtime>(
+    app: &AppHandle<R>,
+    window: &WebviewWindow<R>,
+    state: &MpvState,
+) -> Result<Arc<Mpv>, String> {
     if let Some(m) = state.inner.lock().unwrap().clone() {
         return Ok(m);
     }
@@ -312,7 +355,10 @@ fn start<R: Runtime>(app: &AppHandle<R>, window: &WebviewWindow<R>, state: &MpvS
     if h.is_null() {
         return Err("mpv_create a échoué".into());
     }
-    let mpv = Mpv { api: api.clone(), h };
+    let mpv = Mpv {
+        api: api.clone(),
+        h,
+    };
     let wid = window_id(window)?;
 
     // Base options: no user config, no mpv key bindings or UI (the app provides its own).
@@ -336,7 +382,10 @@ fn start<R: Runtime>(app: &AppHandle<R>, window: &WebviewWindow<R>, state: &MpvS
         ("demuxer-readahead-secs", "20"),
         ("network-timeout", "20"),
         ("user-agent", "Mozilla/5.0 Ondes/0.3"),
-        ("stream-lavf-o", "reconnect=1,reconnect_streamed=1,reconnect_delay_max=5"),
+        (
+            "stream-lavf-o",
+            "reconnect=1,reconnect_streamed=1,reconnect_delay_max=5",
+        ),
         ("alang", "fre,fra,fr,french,eng,en"),
         ("slang", "fre,fra,fr"),
         ("sid", "no"),
@@ -391,7 +440,6 @@ fn start<R: Runtime>(app: &AppHandle<R>, window: &WebviewWindow<R>, state: &MpvS
         let parent = window.ns_view().map_err(|e| e.to_string())? as usize;
         let api2 = api.clone();
         let mpv_h = h as usize;
-        let app2 = app.clone();
         window
             .with_webview(move |w| unsafe {
                 use objc2::msg_send;
@@ -400,11 +448,13 @@ fn start<R: Runtime>(app: &AppHandle<R>, window: &WebviewWindow<R>, state: &MpvS
                 let no = objc2_foundation::NSNumber::new_bool(false);
                 let key = objc2_foundation::NSString::from_str("drawsBackground");
                 let _: () = msg_send![&*wk, setValue: &*no, forKey: &*key];
-                let schedule: crate::mac_render::Schedule = Box::new(move |f| {
-                    let _ = app2.run_on_main_thread(f);
-                });
-                let r = crate::mac_render::GlRenderer::create(api2, mpv_h as Handle, parent as *mut AnyObject, wk, schedule)
-                    .map(|p| p as usize);
+                let r = crate::mac_render::GlRenderer::create(
+                    api2,
+                    mpv_h as Handle,
+                    parent as *mut AnyObject,
+                    wk,
+                )
+                .map(|p| p as usize);
                 let _ = tx.send(r);
             })
             .map_err(|e| e.to_string())?;
@@ -424,64 +474,91 @@ fn spawn_events<R: Runtime>(app: AppHandle<R>, mpv: Arc<Mpv>) {
     let h = mpv.h as usize;
     // The thread does not keep the instance alive: mpv_terminate_destroy (Drop) wakes it up with SHUTDOWN.
     drop(mpv);
-    std::thread::spawn(move || loop {
-        let ev = unsafe { &*(api.wait_event)(h as Handle, -1.0) };
-        match ev.event_id {
-            EVENT_SHUTDOWN => break,
-            EVENT_PROPERTY_CHANGE => {
-                let p = unsafe { &*(ev.data as *const MpvEventProperty) };
-                let name = unsafe { CStr::from_ptr(p.name).to_string_lossy().into_owned() };
-                let value = unsafe {
-                    if p.data.is_null() {
-                        Value::Null
-                    } else {
-                        match p.format {
-                            FORMAT_DOUBLE => json!(*(p.data as *const f64)),
-                            FORMAT_FLAG => json!(*(p.data as *const c_int) != 0),
-                            FORMAT_INT64 => json!(*(p.data as *const i64)),
-                            FORMAT_STRING => json!(CStr::from_ptr(*(p.data as *const *const c_char)).to_string_lossy()),
-                            _ => Value::Null,
+    std::thread::spawn(move || {
+        // High-frequency properties (updated on every frame) are sent at most every THROTTLE.
+        const THROTTLE: std::time::Duration = std::time::Duration::from_millis(250);
+        let mut last_sent: std::collections::HashMap<String, std::time::Instant> =
+            Default::default();
+        loop {
+            let ev = unsafe { &*(api.wait_event)(h as Handle, -1.0) };
+            match ev.event_id {
+                EVENT_SHUTDOWN => break,
+                EVENT_PROPERTY_CHANGE => {
+                    let p = unsafe { &*(ev.data as *const MpvEventProperty) };
+                    let name = unsafe { CStr::from_ptr(p.name).to_string_lossy().into_owned() };
+                    if matches!(name.as_str(), "time-pos" | "demuxer-cache-time") {
+                        let now = std::time::Instant::now();
+                        if last_sent
+                            .get(&name)
+                            .is_some_and(|t| now.duration_since(*t) < THROTTLE)
+                        {
+                            continue;
                         }
+                        last_sent.insert(name.clone(), now);
                     }
-                };
-                let _ = app.emit("mpv-prop", json!({ "name": name, "value": value }));
+                    let value = unsafe {
+                        if p.data.is_null() {
+                            Value::Null
+                        } else {
+                            match p.format {
+                                FORMAT_DOUBLE => json!(*(p.data as *const f64)),
+                                FORMAT_FLAG => json!(*(p.data as *const c_int) != 0),
+                                FORMAT_INT64 => json!(*(p.data as *const i64)),
+                                FORMAT_STRING => {
+                                    json!(CStr::from_ptr(*(p.data as *const *const c_char))
+                                        .to_string_lossy())
+                                }
+                                _ => Value::Null,
+                            }
+                        }
+                    };
+                    PROP_EVENTS.fetch_add(1, std::sync::atomic::Ordering::Relaxed);
+                    let _ = app.emit("mpv-prop", json!({ "name": name, "value": value }));
+                }
+                EVENT_START_FILE => {
+                    let _ = app.emit("mpv-event", json!({ "event": "start-file" }));
+                }
+                EVENT_FILE_LOADED => {
+                    let _ = app.emit("mpv-event", json!({ "event": "file-loaded" }));
+                }
+                EVENT_PLAYBACK_RESTART => {
+                    let _ = app.emit("mpv-event", json!({ "event": "playback-restart" }));
+                }
+                EVENT_END_FILE => {
+                    let e = unsafe { &*(ev.data as *const MpvEventEndFile) };
+                    // reason: 0 normal end, 2 stopped, 3 quit, 4 error, 5 replaced by another file.
+                    let reason = match e.reason {
+                        0 => "eof",
+                        2 => "stop",
+                        3 => "quit",
+                        4 => "error",
+                        5 => "redirect",
+                        _ => "other",
+                    };
+                    let error = if e.error < 0 {
+                        Some(api.err(e.error))
+                    } else {
+                        None
+                    };
+                    let _ = app.emit(
+                        "mpv-event",
+                        json!({ "event": "end-file", "reason": reason, "error": error }),
+                    );
+                }
+                EVENT_LOG_MESSAGE => {
+                    let m = unsafe { &*(ev.data as *const MpvEventLogMessage) };
+                    let text = unsafe {
+                        format!(
+                            "[{}] {}: {}",
+                            CStr::from_ptr(m.level).to_string_lossy(),
+                            CStr::from_ptr(m.prefix).to_string_lossy(),
+                            CStr::from_ptr(m.text).to_string_lossy().trim_end()
+                        )
+                    };
+                    let _ = app.emit("mpv-log", text);
+                }
+                _ => {}
             }
-            EVENT_START_FILE => {
-                let _ = app.emit("mpv-event", json!({ "event": "start-file" }));
-            }
-            EVENT_FILE_LOADED => {
-                let _ = app.emit("mpv-event", json!({ "event": "file-loaded" }));
-            }
-            EVENT_PLAYBACK_RESTART => {
-                let _ = app.emit("mpv-event", json!({ "event": "playback-restart" }));
-            }
-            EVENT_END_FILE => {
-                let e = unsafe { &*(ev.data as *const MpvEventEndFile) };
-                // reason: 0 normal end, 2 stopped, 3 quit, 4 error, 5 replaced by another file.
-                let reason = match e.reason {
-                    0 => "eof",
-                    2 => "stop",
-                    3 => "quit",
-                    4 => "error",
-                    5 => "redirect",
-                    _ => "other",
-                };
-                let error = if e.error < 0 { Some(api.err(e.error)) } else { None };
-                let _ = app.emit("mpv-event", json!({ "event": "end-file", "reason": reason, "error": error }));
-            }
-            EVENT_LOG_MESSAGE => {
-                let m = unsafe { &*(ev.data as *const MpvEventLogMessage) };
-                let text = unsafe {
-                    format!(
-                        "[{}] {}: {}",
-                        CStr::from_ptr(m.level).to_string_lossy(),
-                        CStr::from_ptr(m.prefix).to_string_lossy(),
-                        CStr::from_ptr(m.text).to_string_lossy().trim_end()
-                    )
-                };
-                let _ = app.emit("mpv-log", text);
-            }
-            _ => {}
         }
     });
 }
@@ -489,7 +566,11 @@ fn spawn_events<R: Runtime>(app: AppHandle<R>, mpv: Arc<Mpv>) {
 /// Async command: it runs off the main thread, which mpv needs during its initialization
 /// on macOS (a synchronous command would freeze the app).
 #[tauri::command]
-pub async fn mpv_init<R: Runtime>(app: AppHandle<R>, window: WebviewWindow<R>, state: State<'_, MpvState>) -> Result<InitInfo, String> {
+pub async fn mpv_init<R: Runtime>(
+    app: AppHandle<R>,
+    window: WebviewWindow<R>,
+    state: State<'_, MpvState>,
+) -> Result<InitInfo, String> {
     let mpv = start(&app, &window, &state)?;
     Ok(InitInfo {
         version: mpv.get("mpv-version").unwrap_or_default(),
@@ -500,7 +581,12 @@ pub async fn mpv_init<R: Runtime>(app: AppHandle<R>, window: WebviewWindow<R>, s
 }
 
 fn current(state: &MpvState) -> Result<Arc<Mpv>, String> {
-    state.inner.lock().unwrap().clone().ok_or_else(|| "mpv n'est pas démarré".into())
+    state
+        .inner
+        .lock()
+        .unwrap()
+        .clone()
+        .ok_or_else(|| "mpv n'est pas démarré".into())
 }
 
 #[tauri::command]
@@ -509,7 +595,11 @@ pub async fn mpv_command(state: State<'_, MpvState>, args: Vec<String>) -> Resul
 }
 
 #[tauri::command]
-pub async fn mpv_set(state: State<'_, MpvState>, name: String, value: String) -> Result<(), String> {
+pub async fn mpv_set(
+    state: State<'_, MpvState>,
+    name: String,
+    value: String,
+) -> Result<(), String> {
     current(&state)?.set(&name, &value)
 }
 
@@ -519,21 +609,45 @@ pub async fn mpv_get(state: State<'_, MpvState>, name: String) -> Result<Option<
 }
 
 /// Positions the picture in the window: margins as a fraction of the window size (0 to 1).
+/// Called whenever the player's area moves or the window is resized, so on macOS it also refreshes the
+/// OpenGL drawable size (on the main thread).
 #[tauri::command]
-pub async fn mpv_margins(state: State<'_, MpvState>, left: f64, right: f64, top: f64, bottom: f64) -> Result<(), String> {
+pub async fn mpv_margins<R: Runtime>(
+    app: AppHandle<R>,
+    state: State<'_, MpvState>,
+    left: f64,
+    right: f64,
+    top: f64,
+    bottom: f64,
+) -> Result<(), String> {
     let mpv = current(&state)?;
     let clamp = |v: f64| v.clamp(0.0, 0.99);
     mpv.set("video-margin-ratio-left", &format!("{:.5}", clamp(left)))?;
     mpv.set("video-margin-ratio-right", &format!("{:.5}", clamp(right)))?;
     mpv.set("video-margin-ratio-top", &format!("{:.5}", clamp(top)))?;
-    mpv.set("video-margin-ratio-bottom", &format!("{:.5}", clamp(bottom)))
+    mpv.set(
+        "video-margin-ratio-bottom",
+        &format!("{:.5}", clamp(bottom)),
+    )?;
+    #[cfg(target_os = "macos")]
+    if let Some(r) = *state.renderer.lock().unwrap() {
+        let _ = app.run_on_main_thread(move || unsafe {
+            (*(r as *const crate::mac_render::GlRenderer)).resize()
+        });
+    }
+    #[cfg(not(target_os = "macos"))]
+    let _ = app;
+    Ok(())
 }
 
 /// Audio and subtitle tracks of the current file.
 #[tauri::command]
 pub async fn mpv_tracks(state: State<'_, MpvState>) -> Result<Value, String> {
     let mpv = current(&state)?;
-    let n: usize = mpv.get("track-list/count").and_then(|s| s.parse().ok()).unwrap_or(0);
+    let n: usize = mpv
+        .get("track-list/count")
+        .and_then(|s| s.parse().ok())
+        .unwrap_or(0);
     let mut out = Vec::new();
     for i in 0..n {
         let g = |k: &str| mpv.get(&format!("track-list/{i}/{k}"));
@@ -582,7 +696,8 @@ fn debug_views_main<R: Runtime>(window: &WebviewWindow<R>) -> Result<Vec<String>
             if !layer.is_null() {
                 let lc: *const objc2::runtime::AnyClass = msg_send![&*layer, class];
                 lay.push_str(&format!(" [layer {}", (*lc).name().to_string_lossy()));
-                let subl: Option<Retained<objc2_foundation::NSArray<AnyObject>>> = msg_send![&*layer, sublayers];
+                let subl: Option<Retained<objc2_foundation::NSArray<AnyObject>>> =
+                    msg_send![&*layer, sublayers];
                 if let Some(subl) = subl {
                     let names: Vec<String> = subl
                         .iter()
@@ -595,8 +710,14 @@ fn debug_views_main<R: Runtime>(window: &WebviewWindow<R>) -> Result<Vec<String>
                 }
                 lay.push(']');
             }
-            out.push(format!("{}{}{}", "  ".repeat(depth), (*cls).name().to_string_lossy(), lay));
-            let subs: Option<Retained<objc2_foundation::NSArray<AnyObject>>> = msg_send![&*v, subviews];
+            out.push(format!(
+                "{}{}{}",
+                "  ".repeat(depth),
+                (*cls).name().to_string_lossy(),
+                lay
+            ));
+            let subs: Option<Retained<objc2_foundation::NSArray<AnyObject>>> =
+                msg_send![&*v, subviews];
             if let Some(subs) = subs {
                 for s in subs.iter() {
                     describe(Retained::as_ptr(&s) as *mut AnyObject, depth + 1, out);
@@ -611,4 +732,19 @@ fn debug_views_main<R: Runtime>(window: &WebviewWindow<R>) -> Result<Vec<String>
         let _ = window;
         Ok(Vec::new())
     }
+}
+
+/// Diagnostics: counters since the previous call (property events, main-thread rendering), then reset.
+#[tauri::command]
+pub fn mpv_stats() -> Value {
+    use std::sync::atomic::Ordering::Relaxed;
+    let frames = RENDER_FRAMES.swap(0, Relaxed);
+    let micros = RENDER_MICROS.swap(0, Relaxed);
+    json!({
+        "propEvents": PROP_EVENTS.swap(0, Relaxed),
+        "frames": frames,
+        "renderAvgMs": if frames > 0 { micros as f64 / frames as f64 / 1000.0 } else { 0.0 },
+        "renderMaxMs": RENDER_MAX_MICROS.swap(0, Relaxed) as f64 / 1000.0,
+        "renderTotalMs": micros as f64 / 1000.0,
+    })
 }

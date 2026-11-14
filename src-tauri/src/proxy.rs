@@ -37,15 +37,22 @@ fn random_token() -> Result<String, String> {
 /// Starts the relay and returns its port and token.
 pub fn start(log: Option<std::path::PathBuf>) -> Result<ProxyInfo, String> {
     let std_listener = std::net::TcpListener::bind("127.0.0.1:0").map_err(|e| e.to_string())?;
-    std_listener.set_nonblocking(true).map_err(|e| e.to_string())?;
+    std_listener
+        .set_nonblocking(true)
+        .map_err(|e| e.to_string())?;
     let port = std_listener.local_addr().map_err(|e| e.to_string())?.port();
     let token = random_token()?;
     let client = reqwest::Client::builder()
-        .user_agent("Mozilla/5.0 Ondes/0.3.0")
+        .user_agent("Mozilla/5.0 Ondes/0.3.1")
         .connect_timeout(std::time::Duration::from_secs(20))
         .build()
         .map_err(|e| e.to_string())?;
-    let state = Arc::new(Inner { client, log, port, token: token.clone() });
+    let state = Arc::new(Inner {
+        client,
+        log,
+        port,
+        token: token.clone(),
+    });
     let app = Router::new().route("/proxy", any(handle)).with_state(state);
 
     tauri::async_runtime::spawn(async move {
@@ -64,8 +71,15 @@ impl Inner {
     fn log_line(&self, line: &str) {
         use std::io::Write;
         let Some(path) = &self.log else { return };
-        if let Ok(mut f) = std::fs::OpenOptions::new().create(true).append(true).open(path) {
-            let secs = std::time::SystemTime::now().duration_since(std::time::UNIX_EPOCH).map(|d| d.as_secs()).unwrap_or(0);
+        if let Ok(mut f) = std::fs::OpenOptions::new()
+            .create(true)
+            .append(true)
+            .open(path)
+        {
+            let secs = std::time::SystemTime::now()
+                .duration_since(std::time::UNIX_EPOCH)
+                .map(|d| d.as_secs())
+                .unwrap_or(0);
             let _ = writeln!(f, "{secs} {line}");
         }
     }
@@ -85,8 +99,13 @@ fn error_chain(e: &dyn std::error::Error) -> String {
 
 /// Masks Xtream credentials (/live/u/p/…) and username/password parameters in a URL.
 fn redact(u: &str) -> String {
-    let Ok(mut url) = reqwest::Url::parse(u) else { return "(url)".into() };
-    let segs: Vec<String> = url.path_segments().map(|s| s.map(String::from).collect()).unwrap_or_default();
+    let Ok(mut url) = reqwest::Url::parse(u) else {
+        return "(url)".into();
+    };
+    let segs: Vec<String> = url
+        .path_segments()
+        .map(|s| s.map(String::from).collect())
+        .unwrap_or_default();
     let mut out = Vec::with_capacity(segs.len());
     let mut mask = 0;
     for s in segs {
@@ -105,7 +124,10 @@ fn redact(u: &str) -> String {
         .query_pairs()
         .map(|(k, v)| {
             let hide = ["username", "password", "token"].contains(&k.to_ascii_lowercase().as_str());
-            (k.into_owned(), if hide { "***".into() } else { v.into_owned() })
+            (
+                k.into_owned(),
+                if hide { "***".into() } else { v.into_owned() },
+            )
         })
         .collect();
     if !pairs.is_empty() {
@@ -115,9 +137,18 @@ fn redact(u: &str) -> String {
 }
 
 fn cors(h: &mut HeaderMap) {
-    h.insert(header::ACCESS_CONTROL_ALLOW_ORIGIN, HeaderValue::from_static("*"));
-    h.insert(header::ACCESS_CONTROL_ALLOW_HEADERS, HeaderValue::from_static("*"));
-    h.insert(header::ACCESS_CONTROL_ALLOW_METHODS, HeaderValue::from_static("GET, HEAD, OPTIONS"));
+    h.insert(
+        header::ACCESS_CONTROL_ALLOW_ORIGIN,
+        HeaderValue::from_static("*"),
+    );
+    h.insert(
+        header::ACCESS_CONTROL_ALLOW_HEADERS,
+        HeaderValue::from_static("*"),
+    );
+    h.insert(
+        header::ACCESS_CONTROL_ALLOW_METHODS,
+        HeaderValue::from_static("GET, HEAD, OPTIONS"),
+    );
     h.insert(
         header::ACCESS_CONTROL_EXPOSE_HEADERS,
         HeaderValue::from_static("content-length, content-range, accept-ranges, content-type"),
@@ -142,7 +173,10 @@ async fn handle(
     if q.get("t").map(String::as_str) != Some(st.token.as_str()) {
         return plain(StatusCode::FORBIDDEN, "jeton invalide");
     }
-    let Some(url) = q.get("url").filter(|u| u.starts_with("http://") || u.starts_with("https://")) else {
+    let Some(url) = q
+        .get("url")
+        .filter(|u| u.starts_with("http://") || u.starts_with("https://"))
+    else {
         return plain(StatusCode::BAD_REQUEST, "url invalide");
     };
 
@@ -155,27 +189,49 @@ async fn handle(
         Err(e) => {
             // without_url: otherwise reqwest's error message contains the full address (credentials included).
             let e = e.without_url();
-            st.log_line(&format!("relais erreur {} : {}", redact(url), error_chain(&e)));
+            st.log_line(&format!(
+                "relais erreur {} : {}",
+                redact(url),
+                error_chain(&e)
+            ));
             return plain(StatusCode::BAD_GATEWAY, &e.to_string());
         }
     };
 
     let status = StatusCode::from_u16(resp.status().as_u16()).unwrap_or(StatusCode::BAD_GATEWAY);
     if !status.is_success() {
-        st.log_line(&format!("relais HTTP {} {} -> {}", status.as_u16(), redact(url), redact(resp.url().as_str())));
+        st.log_line(&format!(
+            "relais HTTP {} {} -> {}",
+            status.as_u16(),
+            redact(url),
+            redact(resp.url().as_str())
+        ));
     }
     let final_url = resp.url().clone();
-    let content_type = resp.headers().get(header::CONTENT_TYPE).and_then(|v| v.to_str().ok()).unwrap_or("").to_string();
-    let looks_hls = content_type.to_ascii_lowercase().contains("mpegurl") || final_url.path().to_ascii_lowercase().ends_with(".m3u8");
+    let content_type = resp
+        .headers()
+        .get(header::CONTENT_TYPE)
+        .and_then(|v| v.to_str().ok())
+        .unwrap_or("")
+        .to_string();
+    let looks_hls = content_type.to_ascii_lowercase().contains("mpegurl")
+        || final_url.path().to_ascii_lowercase().ends_with(".m3u8");
 
     if looks_hls && status.is_success() {
         let text = match resp.text().await {
             Ok(t) => t,
             Err(e) => return plain(StatusCode::BAD_GATEWAY, &e.to_string()),
         };
-        let body = if text.contains("#EXT-X-") { rewrite_hls(&text, &final_url, st.port, &st.token) } else { text };
+        let body = if text.contains("#EXT-X-") {
+            rewrite_hls(&text, &final_url, st.port, &st.token)
+        } else {
+            text
+        };
         let mut r = (status, body).into_response();
-        r.headers_mut().insert(header::CONTENT_TYPE, HeaderValue::from_static("application/vnd.apple.mpegurl"));
+        r.headers_mut().insert(
+            header::CONTENT_TYPE,
+            HeaderValue::from_static("application/vnd.apple.mpegurl"),
+        );
         cors(r.headers_mut());
         return r;
     }
@@ -204,8 +260,14 @@ async fn handle(
 
 fn rewrite_hls(text: &str, base: &reqwest::Url, port: u16, token: &str) -> String {
     let prox = |u: &str| -> String {
-        let abs = base.join(u).map(|x| x.to_string()).unwrap_or_else(|_| u.to_string());
-        format!("http://127.0.0.1:{port}/proxy?t={token}&url={}", urlencode(&abs))
+        let abs = base
+            .join(u)
+            .map(|x| x.to_string())
+            .unwrap_or_else(|_| u.to_string());
+        format!(
+            "http://127.0.0.1:{port}/proxy?t={token}&url={}",
+            urlencode(&abs)
+        )
     };
     text.lines()
         .map(|line| {
@@ -245,7 +307,9 @@ fn urlencode(s: &str) -> String {
     let mut out = String::with_capacity(s.len() * 3);
     for b in s.bytes() {
         match b {
-            b'A'..=b'Z' | b'a'..=b'z' | b'0'..=b'9' | b'-' | b'_' | b'.' | b'~' => out.push(b as char),
+            b'A'..=b'Z' | b'a'..=b'z' | b'0'..=b'9' | b'-' | b'_' | b'.' | b'~' => {
+                out.push(b as char)
+            }
             _ => out.push_str(&format!("%{b:02X}")),
         }
     }
@@ -264,22 +328,43 @@ mod tests {
             let c = reqwest::Client::new();
 
             // Without token: rejected.
-            let r = c.get(format!("{base}?url=https://example.com")).send().await.unwrap();
+            let r = c
+                .get(format!("{base}?url=https://example.com"))
+                .send()
+                .await
+                .unwrap();
             assert_eq!(r.status().as_u16(), 403);
 
             // HLS manifest: rewritten to point at the relay, with CORS.
             let src = "https://test-streams.mux.dev/x36xhzz/x36xhzz.m3u8";
-            let r = c.get(format!("{base}?t={}&url={}", info.token, urlencode(src))).send().await.unwrap();
+            let r = c
+                .get(format!("{base}?t={}&url={}", info.token, urlencode(src)))
+                .send()
+                .await
+                .unwrap();
             assert!(r.status().is_success());
             assert_eq!(r.headers()["access-control-allow-origin"], "*");
             let master = r.text().await.unwrap();
-            let variant = master.lines().find(|l| l.starts_with("http://127.0.0.1")).expect("variante réécrite").to_string();
+            let variant = master
+                .lines()
+                .find(|l| l.starts_with("http://127.0.0.1"))
+                .expect("variante réécrite")
+                .to_string();
 
             let media = c.get(&variant).send().await.unwrap().text().await.unwrap();
-            let seg = media.lines().find(|l| l.starts_with("http://127.0.0.1")).expect("segment réécrit").to_string();
+            let seg = media
+                .lines()
+                .find(|l| l.starts_with("http://127.0.0.1"))
+                .expect("segment réécrit")
+                .to_string();
 
             // Segment with Range: 206 and bytes forwarded.
-            let r = c.get(&seg).header("range", "bytes=0-1023").send().await.unwrap();
+            let r = c
+                .get(&seg)
+                .header("range", "bytes=0-1023")
+                .send()
+                .await
+                .unwrap();
             assert_eq!(r.status().as_u16(), 206);
             assert!(r.headers().contains_key("content-range"));
             assert_eq!(r.bytes().await.unwrap().len(), 1024);

@@ -53,7 +53,8 @@ fn download_dir(app: &AppHandle) -> Result<PathBuf, String> {
         .or_else(|_| app.path().download_dir())
         .map_err(|e| e.to_string())?;
     let dir = base.join("Ondes");
-    std::fs::create_dir_all(&dir).map_err(|e| format!("Impossible de créer {} : {e}", dir.display()))?;
+    std::fs::create_dir_all(&dir)
+        .map_err(|e| format!("Impossible de créer {} : {e}", dir.display()))?;
     Ok(dir)
 }
 
@@ -96,16 +97,24 @@ fn download_start(
             Err(_) if cancel.load(Ordering::Relaxed) => ("paused", None),
             Err(e) => ("error", Some(e)),
         };
-        let received = std::fs::metadata(if status == "done" { path.clone() } else { part_path(&path) })
-            .map(|m| m.len())
-            .unwrap_or(0);
+        let received = std::fs::metadata(if status == "done" {
+            path.clone()
+        } else {
+            part_path(&path)
+        })
+        .map(|m| m.len())
+        .unwrap_or(0);
         let _ = app2.emit(
             "download-progress",
             Progress {
                 id: id.clone(),
                 status,
                 received,
-                total: if status == "done" { Some(received) } else { None },
+                total: if status == "done" {
+                    Some(received)
+                } else {
+                    None
+                },
                 path: path.to_string_lossy().into_owned(),
                 error,
             },
@@ -115,12 +124,21 @@ fn download_start(
     Ok(path_str)
 }
 
-async fn run_download(app: &AppHandle, id: &str, url: &str, path: &Path, cancel: &AtomicBool) -> Result<(), String> {
+async fn run_download(
+    app: &AppHandle,
+    id: &str,
+    url: &str,
+    path: &Path,
+    cancel: &AtomicBool,
+) -> Result<(), String> {
     let part = part_path(path);
-    let offset = tokio::fs::metadata(&part).await.map(|m| m.len()).unwrap_or(0);
+    let offset = tokio::fs::metadata(&part)
+        .await
+        .map(|m| m.len())
+        .unwrap_or(0);
 
     let client = reqwest::Client::builder()
-        .user_agent("Mozilla/5.0 Ondes/0.3.0")
+        .user_agent("Mozilla/5.0 Ondes/0.3.1")
         .connect_timeout(Duration::from_secs(20))
         .build()
         .map_err(|e| e.to_string())?;
@@ -128,7 +146,10 @@ async fn run_download(app: &AppHandle, id: &str, url: &str, path: &Path, cancel:
     if offset > 0 {
         req = req.header(reqwest::header::RANGE, format!("bytes={offset}-"));
     }
-    let mut resp = req.send().await.map_err(|e| format!("Connexion impossible : {e}"))?;
+    let mut resp = req
+        .send()
+        .await
+        .map_err(|e| format!("Connexion impossible : {e}"))?;
     let status = resp.status();
     if !status.is_success() {
         return Err(format!("Le serveur a répondu {status}"));
@@ -159,13 +180,22 @@ async fn run_download(app: &AppHandle, id: &str, url: &str, path: &Path, cancel:
             .map_err(|_| "Le serveur ne répond plus".to_string())?
             .map_err(|e| format!("Transfert interrompu : {e}"))?;
         let Some(chunk) = chunk else { break };
-        file.write_all(&chunk).await.map_err(|e| format!("Écriture impossible : {e}"))?;
+        file.write_all(&chunk)
+            .await
+            .map_err(|e| format!("Écriture impossible : {e}"))?;
         received += chunk.len() as u64;
         if last_emit.elapsed() >= Duration::from_millis(500) {
             last_emit = Instant::now();
             let _ = app.emit(
                 "download-progress",
-                Progress { id: id.to_string(), status: "downloading", received, total, path: path_str.clone(), error: None },
+                Progress {
+                    id: id.to_string(),
+                    status: "downloading",
+                    received,
+                    total,
+                    path: path_str.clone(),
+                    error: None,
+                },
             );
         }
     }
@@ -176,7 +206,9 @@ async fn run_download(app: &AppHandle, id: &str, url: &str, path: &Path, cancel:
             return Err("Téléchargement incomplet".into());
         }
     }
-    tokio::fs::rename(&part, path).await.map_err(|e| e.to_string())?;
+    tokio::fs::rename(&part, path)
+        .await
+        .map_err(|e| e.to_string())?;
     Ok(())
 }
 
@@ -217,17 +249,35 @@ fn reveal(app: AppHandle, path: Option<String>) -> Result<(), String> {
     };
     #[cfg(target_os = "windows")]
     {
-        let arg = if target.is_file() { format!("/select,{}", target.display()) } else { target.display().to_string() };
-        std::process::Command::new("explorer").arg(arg).spawn().map_err(|e| e.to_string())?;
+        let arg = if target.is_file() {
+            format!("/select,{}", target.display())
+        } else {
+            target.display().to_string()
+        };
+        std::process::Command::new("explorer")
+            .arg(arg)
+            .spawn()
+            .map_err(|e| e.to_string())?;
     }
     #[cfg(target_os = "macos")]
     {
-        std::process::Command::new("open").arg("-R").arg(&target).spawn().map_err(|e| e.to_string())?;
+        std::process::Command::new("open")
+            .arg("-R")
+            .arg(&target)
+            .spawn()
+            .map_err(|e| e.to_string())?;
     }
     #[cfg(all(not(target_os = "windows"), not(target_os = "macos")))]
     {
-        let dir = if target.is_file() { target.parent().map(Path::to_path_buf).unwrap_or(target) } else { target };
-        std::process::Command::new("xdg-open").arg(dir).spawn().map_err(|e| e.to_string())?;
+        let dir = if target.is_file() {
+            target.parent().map(Path::to_path_buf).unwrap_or(target)
+        } else {
+            target
+        };
+        std::process::Command::new("xdg-open")
+            .arg(dir)
+            .spawn()
+            .map_err(|e| e.to_string())?;
     }
     Ok(())
 }
@@ -236,15 +286,27 @@ fn reveal(app: AppHandle, path: Option<String>) -> Result<(), String> {
 #[tauri::command]
 fn diag_log(app: AppHandle, line: String) {
     use std::io::Write;
-    let Ok(dir) = app.path().app_log_dir() else { return };
+    let Ok(dir) = app.path().app_log_dir() else {
+        return;
+    };
     let _ = std::fs::create_dir_all(&dir);
     let path = dir.join("ondes.log");
     // The log is reset once it exceeds 2 MB.
-    if std::fs::metadata(&path).map(|m| m.len() > 2_000_000).unwrap_or(false) {
+    if std::fs::metadata(&path)
+        .map(|m| m.len() > 2_000_000)
+        .unwrap_or(false)
+    {
         let _ = std::fs::remove_file(&path);
     }
-    if let Ok(mut f) = std::fs::OpenOptions::new().create(true).append(true).open(&path) {
-        let secs = std::time::SystemTime::now().duration_since(std::time::UNIX_EPOCH).map(|d| d.as_secs()).unwrap_or(0);
+    if let Ok(mut f) = std::fs::OpenOptions::new()
+        .create(true)
+        .append(true)
+        .open(&path)
+    {
+        let secs = std::time::SystemTime::now()
+            .duration_since(std::time::UNIX_EPOCH)
+            .map(|d| d.as_secs())
+            .unwrap_or(0);
         let _ = writeln!(f, "{secs} {line}");
     }
 }
@@ -307,7 +369,8 @@ pub fn run() {
             mpv::mpv_get,
             mpv::mpv_margins,
             mpv::mpv_tracks,
-            mpv::mpv_debug_views
+            mpv::mpv_debug_views,
+            mpv::mpv_stats
         ])
         .run(tauri::generate_context!())
         .expect("erreur au lancement d'Ondes");
