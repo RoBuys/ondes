@@ -5,6 +5,7 @@ import { db } from '../lib/store';
 import type { Catalog, Channel, Movie, Show } from '../lib/types';
 import { fmtCount, makeSearch } from '../lib/util';
 import { Empty, Img } from './ui';
+import { plural, t } from '../lib/i18n';
 
 const LIMIT = 48;
 
@@ -81,7 +82,7 @@ export function SearchView({ query, onDone }: { query: string; onDone: () => voi
           </h3>
           {hits.length > LIMIT && (
             <button className="btn ghost" onClick={() => setMore((m) => ({ ...m, [key]: !m[key] }))}>
-              {more[key] ? 'Réduire' : `Tout afficher`}
+              {more[key] ? t("Réduire") : t("Tout afficher")}
             </button>
           )}
         </div>
@@ -95,16 +96,16 @@ export function SearchView({ query, onDone }: { query: string; onDone: () => voi
   return (
     <div className="search-page">
       <div className="muted small">
-        {q ? `${fmtCount(total)} résultat${total > 1 ? 's' : ''} pour « ${q} »` : 'Tapez pour chercher'}
-        {multi && ` dans ${sources.length - missing.length} source${sources.length - missing.length > 1 ? 's' : ''}`}
-        {missing.length > 0 && ` · non chargées : ${missing.map((s) => s.name).join(', ')}`}
+        {q ? t(plural(total, '{n} résultat pour « {q} »', '{n} résultats pour « {q} »'), { n: fmtCount(total), q }) : t("Tapez pour chercher")}
+        {multi && t(plural(sources.length - missing.length, ' dans {n} source', ' dans {n} sources'), { n: sources.length - missing.length })}
+        {missing.length > 0 && t(' · non chargées : {names}', { names: missing.map((s) => s.name).join(', ') })}
       </div>
 
-      {q && total === 0 && <Empty title="Aucun résultat" icon="search">Essayez un autre mot ou une orthographe plus courte.</Empty>}
+      {q && total === 0 && <Empty title={t("Aucun résultat")} icon="search">{t("Essayez un autre mot ou une orthographe plus courte.")}</Empty>}
 
       {section(
         'live',
-        'Chaînes',
+        t("Chaînes"),
         res.live,
         (h) => (
           <button key={h.sourceId + h.item.id} className="search-row" onClick={() => openChannel(h)}>
@@ -123,7 +124,7 @@ export function SearchView({ query, onDone }: { query: string; onDone: () => voi
 
       {section(
         'movies',
-        'Films',
+        t("Films"),
         res.movies,
         (h) => (
           <button key={h.sourceId + h.item.id} className="poster" onClick={() => openVod('movie', h)}>
@@ -139,7 +140,7 @@ export function SearchView({ query, onDone }: { query: string; onDone: () => voi
 
       {section(
         'series',
-        'Séries',
+        t("Séries"),
         res.series,
         (h) => (
           <button key={h.sourceId + h.item.id} className="poster" onClick={() => openVod('show', h)}>

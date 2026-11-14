@@ -1,3 +1,4 @@
+import { t as tr } from './i18n';
 /** True in the Tauri app (WebView2 on Windows). */
 export const isTauri = typeof window !== 'undefined' && '__TAURI_INTERNALS__' in window;
 
@@ -43,9 +44,9 @@ export async function fetchBytes(url: string, signal?: AbortSignal): Promise<Uin
   try {
     r = await fetch(proxied(url), { signal, cache: 'no-store' });
   } catch {
-    throw new Error(`Serveur injoignable : ${new URL(url).host}`);
+    throw new Error(tr('Serveur injoignable : {host}', { host: new URL(url).host }));
   }
-  if (!r.ok) throw new Error(`Le serveur a répondu ${r.status} ${r.statusText}`.trim());
+  if (!r.ok) throw new Error(tr('Le serveur a répondu {status}', { status: `${r.status} ${r.statusText}`.trim() }));
   return new Uint8Array(await r.arrayBuffer());
 }
 
@@ -67,6 +68,6 @@ export async function fetchJson<T>(url: string, signal?: AbortSignal): Promise<T
   try {
     return JSON.parse(t) as T;
   } catch {
-    throw new Error('Réponse du serveur illisible');
+    throw new Error(tr("Réponse du serveur illisible"));
   }
 }

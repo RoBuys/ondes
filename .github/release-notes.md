@@ -2,6 +2,8 @@
 
 ## Features
 
+- **English and French interface** (follows the system language, switch in Settings → Language)
+
 - **M3U** (link or file) and **Xtream Codes** sources, several sources supported
 - **Live**: groups, search, favorites, keyboard zapping (↑ ↓), current and upcoming programme
 - XMLTV **programme guide** (detected automatically or entered manually, `.xml.gz` supported)

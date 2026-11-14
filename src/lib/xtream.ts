@@ -1,6 +1,7 @@
 /* eslint-disable @typescript-eslint/no-explicit-any */
 import { fetchJson } from './net';
 import type { Catalog, Channel, Episode, Movie, Show, Source } from './types';
+import { t } from './i18n';
 
 export function xtBase(s: Pick<Source, 'server'>): string {
   let u = (s.server || '').trim().replace(/\/+$/, '');
@@ -27,8 +28,8 @@ const yearOf = (...c: any[]) => {
 
 export async function xtLogin(s: Source) {
   const r = await fetchJson<any>(apiUrl(s));
-  if (!r || typeof r !== 'object' || !r.user_info) throw new Error("Ce serveur ne répond pas comme un serveur Xtream Codes");
-  if (r.user_info.auth === 0 || r.user_info.auth === '0') throw new Error('Identifiant ou mot de passe incorrect');
+  if (!r || typeof r !== 'object' || !r.user_info) throw new Error(t("Ce serveur ne répond pas comme un serveur Xtream Codes"));
+  if (r.user_info.auth === 0 || r.user_info.auth === '0') throw new Error(t("Identifiant ou mot de passe incorrect"));
   return r;
 }
 
@@ -36,10 +37,10 @@ function categories(arr: any) {
   const names = new Map<string, string>();
   const order = new Map<string, number>();
   asArray(arr).forEach((c, i) => {
-    names.set(str(c.category_id), str(c.category_name) || 'Sans catégorie');
+    names.set(str(c.category_id), str(c.category_name) || t("Sans catégorie"));
     order.set(str(c.category_id), i);
   });
-  return { name: (id: any) => names.get(str(id)) || 'Sans catégorie', order: (id: any) => order.get(str(id)) ?? 1e9 };
+  return { name: (id: any) => names.get(str(id)) || t("Sans catégorie"), order: (id: any) => order.get(str(id)) ?? 1e9 };
 }
 
 export async function loadXtream(s: Source): Promise<Catalog> {
@@ -64,7 +65,7 @@ export async function loadXtream(s: Source): Promise<Catalog> {
     .sort((a, b) => a.o - b.o || a.n - b.n)
     .map(({ x }) => ({
       id: `${s.id}:l:${x.stream_id}`,
-      name: str(x.name) || 'Sans nom',
+      name: str(x.name) || t("Sans nom"),
       logo: str(x.stream_icon) || undefined,
       group: L.name(x.category_id),
       url: `${base}/live/${u}/${p}/${x.stream_id}.ts`,
@@ -79,7 +80,7 @@ export async function loadXtream(s: Source): Promise<Catalog> {
     .sort((a, b) => a.o - b.o)
     .map(({ x }) => ({
       id: `${s.id}:m:${x.stream_id}`,
-      name: str(x.name) || 'Sans titre',
+      name: str(x.name) || t("Sans titre"),
       poster: str(x.stream_icon) || undefined,
       group: V.name(x.category_id),
       url: `${base}/movie/${u}/${p}/${x.stream_id}.${str(x.container_extension) || 'mp4'}`,
@@ -94,7 +95,7 @@ export async function loadXtream(s: Source): Promise<Catalog> {
     .sort((a, b) => a.o - b.o)
     .map(({ x }) => ({
       id: `${s.id}:s:${x.series_id}`,
-      name: str(x.name) || 'Sans titre',
+      name: str(x.name) || t("Sans titre"),
       poster: str(x.cover) || undefined,
       group: S.name(x.category_id),
       seriesId: Number(x.series_id),
@@ -165,7 +166,7 @@ export async function xtSeriesInfo(s: Source, seriesId: number): Promise<{ info:
     for (const e of asArray(list)) {
       episodes.push({
         id: `${s.id}:e:${e.id}`,
-        title: str(e.title) || `Épisode ${e.episode_num}`,
+        title: str(e.title) || t('Épisode {n}', { n: e.episode_num }),
         season: Number(e.season ?? season) || 1,
         episode: Number(e.episode_num) || 0,
         url: `${base}/series/${u}/${p}/${e.id}.${str(e.container_extension) || 'mp4'}`,

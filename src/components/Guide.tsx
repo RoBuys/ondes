@@ -6,6 +6,7 @@ import { cx, fmtDay, fmtTime } from '../lib/util';
 import { programmesFor } from '../lib/xmltv';
 import { ALL, channelsForGroup, FAV, useLiveGroups } from './Live';
 import { Empty, Icon, Img, Modal, useNow } from './ui';
+import { t } from '../lib/i18n';
 
 const PX = 4.5; // pixels per minute
 const ROW = 60;
@@ -50,18 +51,18 @@ export function GuideView() {
   if (!catalog) return null;
   if (!epg) {
     return (
-      <Empty title="Guide des programmes indisponible" icon="guide">
+      <Empty title={t("Guide des programmes indisponible")} icon="guide">
         {epgStatus.state === 'loading' ? (
-          <p>Chargement du guide…</p>
+          <p>{t("Chargement du guide…")}</p>
         ) : (
           <>
             <p>
               {epgStatus.error ??
-                'Cette source n’annonce pas de guide XMLTV. Ajoutez une adresse de guide dans les réglages de la source.'}
+                t("Cette source n’annonce pas de guide XMLTV. Ajoutez une adresse de guide dans les réglages de la source.")}
             </p>
             {epgStatus.error && (
               <button className="btn" onClick={refreshEpg}>
-                <Icon name="refresh" size={16} /> Réessayer
+                <Icon name="refresh" size={16} /> {t("Réessayer")}
               </button>
             )}
           </>
@@ -94,13 +95,13 @@ export function GuideView() {
           ))}
         </select>
         <div className="guide-nav">
-          <button className="icon-btn" onClick={() => setShiftH((h) => h - 3)} aria-label="Plus tôt">
+          <button className="icon-btn" onClick={() => setShiftH((h) => h - 3)} aria-label={t("Plus tôt")}>
             <Icon name="left" />
           </button>
           <button className="btn ghost" onClick={() => setShiftH(0)} disabled={shiftH === 0}>
-            Maintenant
+            {t("Maintenant")}
           </button>
-          <button className="icon-btn" onClick={() => setShiftH((h) => h + 3)} aria-label="Plus tard">
+          <button className="icon-btn" onClick={() => setShiftH((h) => h + 3)} aria-label={t("Plus tard")}>
             <Icon name="right" />
           </button>
         </div>
@@ -108,7 +109,7 @@ export function GuideView() {
       </div>
 
       {rows.length === 0 ? (
-        <div className="pane-empty">{group === FAV ? 'Aucun favori pour l’instant.' : 'Groupe vide.'}</div>
+        <div className="pane-empty">{group === FAV ? t("Aucun favori pour l’instant.") : t("Groupe vide.")}</div>
       ) : (
         <div className="guide-scroll" ref={scroller} onScroll={(e) => setScrollTop(e.currentTarget.scrollTop)}>
           <div style={{ width: LEFT + width, height: HEAD + rows.length * ROW, position: 'relative' }}>
@@ -139,7 +140,7 @@ export function GuideView() {
                   </button>
                   {progs.length === 0 && (
                     <div className="g-none" style={{ left: LEFT + 6 }}>
-                      Pas de programme
+                      {t("Pas de programme")}
                     </div>
                   )}
                   {progs.map((p) => {
@@ -190,7 +191,7 @@ export function GuideView() {
                 setView('live');
               }}
             >
-              <Icon name="play" size={16} filled /> Regarder la chaîne
+              <Icon name="play" size={16} filled /> {t("Regarder la chaîne")}
             </button>
           </div>
         </Modal>

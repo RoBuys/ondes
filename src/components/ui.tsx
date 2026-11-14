@@ -1,6 +1,7 @@
 import { useEffect, useLayoutEffect, useRef, useState, type ReactNode } from 'react';
 import { mediaSrc } from '../lib/net';
 import { cx } from '../lib/util';
+import { t } from '../lib/i18n';
 
 const PATHS: Record<string, ReactNode> = {
   tv: (
@@ -253,7 +254,7 @@ export function Modal({ onClose, children, className }: { onClose: () => void; c
   return (
     <div className="modal-back" onMouseDown={(e) => e.target === e.currentTarget && onClose()}>
       <div className={cx('modal', className)} role="dialog" aria-modal="true">
-        <button className="icon-btn modal-close" onClick={onClose} aria-label="Fermer">
+        <button className="icon-btn modal-close" onClick={onClose} aria-label={t("Fermer")}>
           <Icon name="x" />
         </button>
         {children}
@@ -277,7 +278,7 @@ export function SearchBox({ value, onChange, placeholder }: { value: string; onC
       <Icon name="search" size={17} />
       <input value={value} onChange={(e) => onChange(e.target.value)} placeholder={placeholder} spellCheck={false} />
       {value && (
-        <button className="search-clear" onClick={() => onChange('')} aria-label="Effacer">
+        <button className="search-clear" onClick={() => onChange('')} aria-label={t("Effacer")}>
           <Icon name="x" size={15} />
         </button>
       )}
@@ -306,9 +307,9 @@ export function GroupList({
   return (
     <div className="groups">
       {onManage && (
-        <button className="group manage" onClick={onManage} title="Masquer, renommer, réordonner les groupes">
+        <button className="group manage" onClick={onManage} title={t("Masquer, renommer, réordonner les groupes")}>
           <Icon name="sliders" size={15} />
-          <span className="group-label">Organiser</span>
+          <span className="group-label">{t("Organiser")}</span>
         </button>
       )}
       {groups.map((g) => (

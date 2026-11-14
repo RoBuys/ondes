@@ -7,6 +7,7 @@ import { cx, fmtTime, makeSearch } from '../lib/util';
 import { nowAndNext, programmesFor, progressOf } from '../lib/xmltv';
 import { Player } from './Player';
 import { Empty, GroupList, Icon, Img, SearchBox, useNow, VirtualList, type GroupItem } from './ui';
+import { t } from '../lib/i18n';
 
 export const FAV = '__fav';
 export const ALL = '__all';
@@ -23,9 +24,9 @@ export function useLiveGroups(live: Channel[], favs: Set<string>, lists: Channel
     const favCount = live.reduce((n, c) => n + (favs.has(c.id) ? 1 : 0), 0);
     const ids = new Set(live.map((c) => c.id));
     return [
-      { id: FAV, label: 'Favoris', count: favCount, icon: 'star' },
+      { id: FAV, label: t("Favoris"), count: favCount, icon: 'star' },
       ...lists.map((l) => ({ id: LIST_PREFIX + l.id, label: l.name, count: l.ids.filter((i) => ids.has(i)).length, icon: 'list' })),
-      { id: ALL, label: 'Toutes les chaînes', count: live.length, icon: 'tv' },
+      { id: ALL, label: t("Toutes les chaînes"), count: live.length, icon: 'tv' },
       ...[...counts].map(([g, n]) => ({ id: g, label: g, count: n })),
     ];
   }, [live, favs, lists]);
@@ -88,8 +89,8 @@ export function LiveView() {
   if (!catalog) return null;
   if (!live.length) {
     return (
-      <Empty title="Aucune chaîne en direct" icon="tv">
-        Cette source ne contient que des films ou des séries.
+      <Empty title={t("Aucune chaîne en direct")} icon="tv">
+        {t("Cette source ne contient que des films ou des séries.")}
       </Empty>
     );
   }
@@ -103,11 +104,11 @@ export function LiveView() {
 
       <div className="channels">
         <div className="pane-head">
-          <SearchBox value={q} onChange={setQ} placeholder="Rechercher une chaîne" />
+          <SearchBox value={q} onChange={setQ} placeholder={t("Rechercher une chaîne")} />
         </div>
         {list.length === 0 ? (
           <div className="pane-empty">
-            {q ? 'Aucune chaîne ne correspond.' : group === FAV ? 'Ajoutez des favoris avec l’étoile.' : 'Groupe vide.'}
+            {q ? t("Aucune chaîne ne correspond.") : group === FAV ? t("Ajoutez des favoris avec l’étoile.") : t("Groupe vide.")}
           </div>
         ) : (
           <VirtualList
@@ -125,7 +126,7 @@ export function LiveView() {
                   onClick={() => setLiveSel(ch.id)}
                   onContextMenu={(e) => {
                     e.preventDefault();
-                    editItem(ch.id, `Chaîne · ${ch.group}`);
+                    editItem(ch.id, t('Chaîne · {group}', { group: ch.group }));
                   }}
                 >
                   <span className="ch-num">{ch.num ?? i + 1}</span>
@@ -149,7 +150,7 @@ export function LiveView() {
                       e.stopPropagation();
                       toggleFav(ch.id);
                     }}
-                    aria-label={on ? 'Retirer des favoris' : 'Ajouter aux favoris'}
+                    aria-label={on ? t("Retirer des favoris") : t("Ajouter aux favoris")}
                   >
                     <Icon name="star" size={17} filled={on} />
                   </button>
@@ -173,18 +174,18 @@ export function LiveView() {
                   <h2>{sel.name}</h2>
                   <div className="muted">{sel.group}</div>
                 </div>
-                <button className="btn ghost" onClick={() => editItem(sel.id, `Chaîne · ${sel.group}`)} title="Ajouter à une liste, renommer, masquer">
-                  <Icon name="list" size={16} /> Listes
+                <button className="btn ghost" onClick={() => editItem(sel.id, t('Chaîne · {group}', { group: sel.group }))} title={t("Ajouter à une liste, renommer, masquer")}>
+                  <Icon name="list" size={16} /> {t("Listes")}
                 </button>
                 <button className={cx('btn ghost', favs.has(sel.id) && 'active')} onClick={() => toggleFav(sel.id)}>
                   <Icon name="star" size={16} filled={favs.has(sel.id)} />
-                  {favs.has(sel.id) ? 'Favori' : 'Ajouter aux favoris'}
+                  {favs.has(sel.id) ? t("Favori") : t("Ajouter aux favoris")}
                 </button>
               </div>
               {cur ? (
                 <div className="now-card">
                   <div className="now-time">
-                    <span className="live-dot" /> En ce moment · {fmtTime(cur.start)} – {fmtTime(cur.stop)}
+                    <span className="live-dot" /> {t('En ce moment · {start} – {stop}', { start: fmtTime(cur.start), stop: fmtTime(cur.stop) })}
                   </div>
                   <div className="now-title">{cur.title}</div>
                   <div className="bar big">
@@ -193,11 +194,11 @@ export function LiveView() {
                   {cur.desc && <p className="now-desc">{cur.desc}</p>}
                 </div>
               ) : (
-                <div className="now-card muted">{epg ? 'Pas de programme pour cette chaîne.' : 'Aucun guide des programmes chargé.'}</div>
+                <div className="now-card muted">{epg ? t("Pas de programme pour cette chaîne.") : t("Aucun guide des programmes chargé.")}</div>
               )}
               {upcoming.length > 0 && (
                 <div className="upnext">
-                  <div className="section-label">À suivre</div>
+                  <div className="section-label">{t("À suivre")}</div>
                   {upcoming.map((p) => (
                     <div className="upnext-row" key={p.start}>
                       <span className="upnext-time">{fmtTime(p.start)}</span>
@@ -209,8 +210,8 @@ export function LiveView() {
             </div>
           </>
         ) : (
-          <Empty title="Choisissez une chaîne" icon="tv">
-            Cliquez sur une chaîne pour la regarder. Les flèches ↑ ↓ permettent de zapper.
+          <Empty title={t("Choisissez une chaîne")} icon="tv">
+            {t("Cliquez sur une chaîne pour la regarder. Les flèches ↑ ↓ permettent de zapper.")}
           </Empty>
         )}
       </div>

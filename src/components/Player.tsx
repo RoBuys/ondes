@@ -9,6 +9,7 @@ import { clearPosition, getPosition, prefs, setPosition } from '../lib/store';
 import type { PlaySpec } from '../lib/types';
 import { cx } from '../lib/util';
 import { copyText, Icon } from './ui';
+import { t as tr } from '../lib/i18n';
 
 type Engine = 'hls' | 'ts' | 'native';
 interface Attempt {
@@ -143,7 +144,7 @@ function WebPlayer({
       if (hadPlayed && !decode && reconnects < MAX_RECONNECTS) return scheduleReconnect();
       if (!hadPlayed && t + 1 < attempts.length) return run(t + 1);
       token = -1;
-      setState({ loading: false, error: hadPlayed ? `Connexion perdue (${why})` : why });
+      setState({ loading: false, error: hadPlayed ? tr('Connexion perdue ({why})', { why }) : why });
     };
 
     const run = (i: number): void => {
@@ -155,7 +156,7 @@ function WebPlayer({
       lastT = -1;
       frozenFor = 0;
       setState((s) => (s.reconnecting ? s : { loading: true }));
-      timer = window.setTimeout(() => fail(t, 'Le flux ne répond pas (délai dépassé)'), spec.live ? 15000 : 25000);
+      timer = window.setTimeout(() => fail(t, tr("Le flux ne répond pas (délai dépassé)")), spec.live ? 15000 : 25000);
       try {
         if (a.engine === 'hls') {
           if (Hls.isSupported()) {
@@ -185,7 +186,7 @@ function WebPlayer({
             v.src = mediaSrc(a.url);
           }
         } else if (a.engine === 'ts') {
-          if (!mpegts.isSupported()) return fail(t, 'MPEG-TS non pris en charge');
+          if (!mpegts.isSupported()) return fail(t, tr("MPEG-TS non pris en charge"));
           const p = mpegts.createPlayer(
             { type: 'mpegts', isLive: spec.tsOverride?.isLive ?? spec.live, url: proxied(a.url) },
             {
@@ -244,7 +245,7 @@ function WebPlayer({
       const err = v.error;
       if (!err) return;
       diag('erreur média', engine, err.code, err.message);
-      fail(token, `Format non pris en charge (code ${err.code})`);
+      fail(token, tr('Format non pris en charge (code {code})', { code: err.code }));
     };
 
     // Frozen stream detection: the picture no longer moves while playback is running.
@@ -270,7 +271,7 @@ function WebPlayer({
         v.currentTime = v.currentTime + 0.1;
         return;
       }
-      if (hadPlayed && frozenFor >= (spec.live ? 12 : 20)) fail(token, 'flux figé');
+      if (hadPlayed && frozenFor >= (spec.live ? 12 : 20)) fail(token, tr("flux figé"));
     }, 1000);
 
     // Network is back: no need to wait for the delay to expire.
@@ -288,7 +289,7 @@ function WebPlayer({
     v.addEventListener('error', onError);
     window.addEventListener('online', onOnline);
     if (attempts.length) run(0);
-    else setState({ loading: false, error: 'Aucune adresse de flux' });
+    else setState({ loading: false, error: tr("Aucune adresse de flux") });
 
     return () => {
       disposed = true;
@@ -399,7 +400,7 @@ function WebPlayer({
       <video ref={videoRef} controls autoPlay playsInline poster={spec.poster ? mediaSrc(spec.poster) : undefined} />
       {mode === 'overlay' && (
         <div className="player-top">
-          <button className="icon-btn" onClick={onClose} aria-label="Retour">
+          <button className="icon-btn" onClick={onClose} aria-label={tr("Retour")}>
             <Icon name="back" size={22} />
           </button>
           <div className="player-titles">
@@ -409,7 +410,7 @@ function WebPlayer({
         </div>
       )}
       {mode === 'inline' && (
-        <button className="icon-btn player-fs" onClick={toggleFs} title="Plein écran" aria-label="Plein écran">
+        <button className="icon-btn player-fs" onClick={toggleFs} title={tr("Plein écran")} aria-label={tr("Plein écran")}>
           <Icon name="expand" size={18} />
         </button>
       )}
@@ -418,21 +419,21 @@ function WebPlayer({
           <span className="spinner" />
           {state.reconnecting && (
             <span className="player-reconnect">
-              Connexion perdue — reconnexion ({state.reconnecting}/{MAX_RECONNECTS})…
+              {tr('Connexion perdue — reconnexion ({n}/{max})…', { n: state.reconnecting, max: MAX_RECONNECTS })}
             </span>
           )}
         </div>
       )}
       {state.error && (
         <div className="player-msg error">
-          <strong>Impossible de lire ce flux</strong>
+          <strong>{tr("Impossible de lire ce flux")}</strong>
           <small>{state.error}</small>
           <div className="row">
             <button className="btn" onClick={() => setRetry((r) => r + 1)}>
-              <Icon name="refresh" size={16} /> Réessayer
+              <Icon name="refresh" size={16} /> {tr("Réessayer")}
             </button>
             <button className="btn ghost" onClick={copy}>
-              <Icon name={copied ? 'check' : 'copy'} size={16} /> {copied ? 'Copiée' : "Copier l'adresse"}
+              <Icon name={copied ? 'check' : 'copy'} size={16} /> {copied ? tr("Copiée") : tr("Copier l'adresse")}
             </button>
           </div>
         </div>

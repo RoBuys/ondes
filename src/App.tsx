@@ -17,15 +17,16 @@ import { epgUrlFor, loadCatalog, loadEpg } from './lib/catalog';
 import { db, prefs } from './lib/store';
 import type { Catalog, Epg, PlaySpec, Section, Settings, Source } from './lib/types';
 import { cx, errMsg, fmtCount, uid } from './lib/util';
+import { t } from './lib/i18n';
 
 const DAY = 86400_000;
 const EPG_TTL = 12 * 3600_000;
 
 const NAV: { id: View & Section; label: string; icon: string }[] = [
-  { id: 'live', label: 'Direct', icon: 'tv' },
-  { id: 'guide', label: 'Guide', icon: 'guide' },
-  { id: 'movies', label: 'Films', icon: 'film' },
-  { id: 'series', label: 'Séries', icon: 'series' },
+  { id: 'live', label: t("Direct"), icon: 'tv' },
+  { id: 'guide', label: t("Guide"), icon: 'guide' },
+  { id: 'movies', label: t("Films"), icon: 'film' },
+  { id: 'series', label: t("Séries"), icon: 'series' },
 ];
 
 export default function App() {
@@ -110,7 +111,7 @@ export default function App() {
   /* ---------- Playlist ---------- */
   const fetchCatalog = useCallback(async (src: Source, force: boolean) => {
     const seq = ++loadSeq.current;
-    setStatus({ loading: true, message: 'Chargement de la playlist…' });
+    setStatus({ loading: true, message: t("Chargement de la playlist…") });
     try {
       if (!force) {
         const cached = await db.catalog(src.id);
@@ -121,7 +122,7 @@ export default function App() {
             setStatus({ loading: false });
             return;
           }
-          setStatus({ loading: true, message: 'Mise à jour de la playlist…' });
+          setStatus({ loading: true, message: t("Mise à jour de la playlist…") });
         }
       }
       const fresh = await loadCatalog(src);
@@ -320,19 +321,19 @@ export default function App() {
           ))}
           <button className={cx('rail-btn', view === 'favorites' && 'on')} onClick={() => setView('favorites')}>
             <Icon name="star" size={22} />
-            <span>Favoris</span>
+            <span>{t("Favoris")}</span>
           </button>
           {downloadsAvailable && (
             <button className={cx('rail-btn', view === 'downloads' && 'on')} onClick={() => setView('downloads')}>
               <Icon name="download" size={22} />
-              <span>Téléchargés</span>
+              <span>{t("Téléchargés")}</span>
               {Object.values(downloads.items).some((d) => d.status === 'downloading') && <i className="rail-dot" />}
             </button>
           )}
           <div className="rail-spacer" />
           <button className={cx('rail-btn', view === 'settings' && 'on')} onClick={() => setView('settings')}>
             <Icon name="sliders" size={22} />
-            <span>Réglages</span>
+            <span>{t("Réglages")}</span>
           </button>
         </nav>
 
@@ -347,12 +348,12 @@ export default function App() {
             </select>
             {viewCatalog && (
               <span className="muted small counts">
-                {fmtCount(viewCatalog.live.length)} chaînes · {fmtCount(viewCatalog.movies.length)} films · {fmtCount(viewCatalog.series.length)} séries
+                {t('{live} chaînes · {movies} films · {series} séries', { live: fmtCount(viewCatalog.live.length), movies: fmtCount(viewCatalog.movies.length), series: fmtCount(viewCatalog.series.length) })}
               </span>
             )}
             <div className="topbar-spacer" />
             <div className="global-search">
-              <SearchBox value={globalQ} onChange={onGlobalSearch} placeholder="Rechercher dans toutes les sources" />
+              <SearchBox value={globalQ} onChange={onGlobalSearch} placeholder={t("Rechercher dans toutes les sources")} />
             </div>
             {status.loading && (
               <span className="status">
@@ -361,7 +362,7 @@ export default function App() {
             )}
             {!status.loading && epgStatus.state === 'loading' && (
               <span className="status">
-                <span className="spinner small" /> Chargement du guide…
+                <span className="spinner small" /> {t("Chargement du guide…")}
               </span>
             )}
             {status.error && (
@@ -369,7 +370,7 @@ export default function App() {
                 {status.error}
               </span>
             )}
-            <button className="icon-btn" onClick={refresh} title="Actualiser la playlist" disabled={status.loading}>
+            <button className="icon-btn" onClick={refresh} title={t("Actualiser la playlist")} disabled={status.loading}>
               <Icon name="refresh" size={18} />
             </button>
           </header>
@@ -385,20 +386,20 @@ export default function App() {
               <div className="center-msg">
                 {status.error ? (
                   <div className="load-error">
-                    <h3>Impossible de charger « {active?.name} »</h3>
+                    <h3>{t('Impossible de charger « {name} »', { name: active?.name ?? '' })}</h3>
                     <p className="muted">{status.error}</p>
                     <div className="row">
                       <button className="btn" onClick={refresh}>
-                        <Icon name="refresh" size={16} /> Réessayer
+                        <Icon name="refresh" size={16} /> {t("Réessayer")}
                       </button>
                       <button className="btn ghost" onClick={() => setView('settings')}>
-                        Gérer les sources
+                        {t("Gérer les sources")}
                       </button>
                     </div>
                   </div>
                 ) : (
                   <>
-                    <span className="spinner" /> {status.message ?? 'Chargement…'}
+                    <span className="spinner" /> {status.message ?? t("Chargement…")}
                   </>
                 )}
               </div>
@@ -437,13 +438,13 @@ function Welcome() {
         <div className="welcome-head">
           <Logo size={56} />
           <div>
-            <h1>Bienvenue dans Ondes</h1>
-            <p className="muted">Ajoutez votre playlist de streams pour commencer : lien M3U, fichier ou identifiants Xtream Codes.</p>
+            <h1>{t("Bienvenue dans Ondes")}</h1>
+            <p className="muted">{t("Ajoutez votre playlist de streams pour commencer : lien M3U, fichier ou identifiants Xtream Codes.")}</p>
           </div>
         </div>
         <AddSourceForm />
         <div className="welcome-demo">
-          <span className="muted small">Pas de playlist sous la main ?</span>
+          <span className="muted small">{t("Pas de playlist sous la main ?")}</span>
           <button
             className="btn ghost"
             disabled={busy}
@@ -452,7 +453,7 @@ function Welcome() {
               await addSource({ id: uid(), createdAt: Date.now(), kind: 'm3u', name: DEMO_SOURCE.name, url: DEMO_SOURCE.url });
             }}
           >
-            Essayer avec des chaînes gratuites
+            {t("Essayer avec des chaînes gratuites")}
           </button>
         </div>
       </div>

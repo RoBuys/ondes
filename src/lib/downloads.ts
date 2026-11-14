@@ -3,6 +3,7 @@ import { listen } from '@tauri-apps/api/event';
 import { useCallback, useEffect, useRef, useState } from 'react';
 import { isTauri } from './net';
 import { prefs } from './store';
+import { locale, t } from './i18n';
 
 export type DownloadStatus = 'queued' | 'downloading' | 'paused' | 'done' | 'error';
 
@@ -46,9 +47,9 @@ export function localSrc(d: Download): string | undefined {
 }
 
 export function fmtBytes(n?: number) {
-  if (!n) return '0 Mo';
-  if (n >= 1e9) return `${(n / 1e9).toLocaleString('fr-FR', { maximumFractionDigits: 2 })} Go`;
-  return `${Math.round(n / 1e6).toLocaleString('fr-FR')} Mo`;
+  if (!n) return t('{n} Mo', { n: 0 });
+  if (n >= 1e9) return t('{n} Go', { n: (n / 1e9).toLocaleString(locale, { maximumFractionDigits: 2 }) });
+  return t('{n} Mo', { n: Math.round(n / 1e6).toLocaleString(locale) });
 }
 
 export function useDownloads() {
@@ -98,7 +99,7 @@ export function useDownloads() {
     for (const d of Object.values(itemsRef.current)) {
       if (d.status !== 'done' || !d.path) continue;
       invoke<boolean>('file_exists', { path: d.path }).then((ok) => {
-        if (!ok) setItems((prev) => (prev[d.id] ? { ...prev, [d.id]: { ...prev[d.id], status: 'error', error: 'Fichier introuvable sur le disque' } } : prev));
+        if (!ok) setItems((prev) => (prev[d.id] ? { ...prev, [d.id]: { ...prev[d.id], status: 'error', error: t("Fichier introuvable sur le disque") } } : prev));
       });
     }
   }, []);

@@ -3,13 +3,14 @@ import { useApp } from '../context';
 import { downloadsAvailable, fmtBytes, localSrc, type Download } from '../lib/downloads';
 import { cx } from '../lib/util';
 import { Empty, Icon, Img } from './ui';
+import { t, tErr } from '../lib/i18n';
 
 const STATUS: Record<Download['status'], string> = {
-  queued: 'En attente',
-  downloading: 'Téléchargement',
-  paused: 'En pause',
-  done: 'Téléchargé',
-  error: 'Erreur',
+  queued: t("En attente"),
+  downloading: t("Téléchargement"),
+  paused: t("En pause"),
+  done: t("Téléchargé"),
+  error: t("Erreur"),
 };
 
 export function DownloadsView() {
@@ -22,8 +23,8 @@ export function DownloadsView() {
 
   if (!downloadsAvailable) {
     return (
-      <Empty title="Téléchargements" icon="download">
-        Le téléchargement est disponible dans l’application Windows.
+      <Empty title={t("Téléchargements")} icon="download">
+        {t("Le téléchargement est disponible dans l’application Ondes.")}
       </Empty>
     );
   }
@@ -38,19 +39,19 @@ export function DownloadsView() {
     <div className="downloads">
       <div className="section-head">
         <div>
-          <h2>Téléchargements</h2>
+          <h2>{t("Téléchargements")}</h2>
           <div className="muted small">
-            {downloads.dir ?? 'Dossier Vidéos\\Ondes'} · un téléchargement à la fois, pour respecter la limite de connexions de votre abonnement.
+            {t('{dir} · un téléchargement à la fois, pour respecter la limite de connexions de votre abonnement.', { dir: downloads.dir ?? t('Dossier Vidéos/Ondes') })}
           </div>
         </div>
         <button className="btn ghost" onClick={() => downloads.reveal()}>
-          <Icon name="folder" size={16} /> Ouvrir le dossier
+          <Icon name="folder" size={16} /> {t("Ouvrir le dossier")}
         </button>
       </div>
 
       {list.length === 0 ? (
-        <Empty title="Aucun téléchargement" icon="download">
-          Depuis la fiche d’un film ou d’une série, utilisez « Télécharger » pour regarder hors connexion.
+        <Empty title={t("Aucun téléchargement")} icon="download">
+          {t("Depuis la fiche d’un film ou d’une série, utilisez « Télécharger » pour regarder hors connexion.")}
         </Empty>
       ) : (
         <div className="dl-list">
@@ -71,29 +72,29 @@ export function DownloadsView() {
                     {STATUS[d.status]}
                     {d.status === 'done' && ` · ${fmtBytes(d.received || d.total)}`}
                     {(d.status === 'downloading' || d.status === 'paused') &&
-                      ` · ${fmtBytes(d.received)}${d.total ? ` sur ${fmtBytes(d.total)} (${Math.floor(pct)} %)` : ''}`}
-                    {d.status === 'error' && d.error && ` : ${d.error}`}
+                      ` · ${d.total ? t('{done} sur {total} ({pct} %)', { done: fmtBytes(d.received), total: fmtBytes(d.total), pct: Math.floor(pct) }) : fmtBytes(d.received)}`}
+                    {d.status === 'error' && d.error && ` : ${tErr(d.error)}`}
                   </div>
                 </div>
                 <div className="dl-actions">
                   {d.status === 'done' && (
                     <>
                       <button className="btn" onClick={() => playLocal(d)}>
-                        <Icon name="play" size={16} filled /> Lire
+                        <Icon name="play" size={16} filled /> {t("Lire")}
                       </button>
-                      <button className="icon-btn" onClick={() => downloads.reveal(d.path)} title="Afficher dans l’Explorateur">
+                      <button className="icon-btn" onClick={() => downloads.reveal(d.path)} title={t("Afficher dans le dossier")}>
                         <Icon name="folder" size={18} />
                       </button>
                     </>
                   )}
                   {(d.status === 'downloading' || d.status === 'queued') && (
                     <button className="btn ghost" onClick={() => downloads.pause(d.id)}>
-                      <Icon name="pause" size={16} /> Pause
+                      <Icon name="pause" size={16} /> {t("Pause")}
                     </button>
                   )}
                   {(d.status === 'paused' || d.status === 'error') && (
                     <button className="btn ghost" onClick={() => downloads.resume(d.id)}>
-                      <Icon name="refresh" size={16} /> {d.status === 'error' ? 'Réessayer' : 'Reprendre'}
+                      <Icon name="refresh" size={16} /> {d.status === 'error' ? t("Réessayer") : t("Reprendre")}
                     </button>
                   )}
                   {confirm === d.id ? (
@@ -104,10 +105,10 @@ export function DownloadsView() {
                         setConfirm(null);
                       }}
                     >
-                      Supprimer le fichier
+                      {t("Supprimer le fichier")}
                     </button>
                   ) : (
-                    <button className="icon-btn" onClick={() => setConfirm(d.id)} title="Supprimer">
+                    <button className="icon-btn" onClick={() => setConfirm(d.id)} title={t("Supprimer")}>
                       <Icon name="trash" size={18} />
                     </button>
                   )}
@@ -136,23 +137,23 @@ export function DownloadButton({
   const d = downloads.items[id];
   const pct = d?.total ? Math.floor((d.received / d.total) * 100) : 0;
 
-  let label = 'Télécharger';
+  let label = t("Télécharger");
   let icon = 'download';
   let action = onStart;
   if (d?.status === 'done') {
-    label = 'Téléchargé';
+    label = t("Téléchargé");
     icon = 'check';
     action = () => setView('downloads');
   } else if (d?.status === 'downloading') {
-    label = d.total ? `${pct} %` : 'En cours…';
+    label = d.total ? `${pct} %` : t("En cours…");
     icon = 'pause';
     action = () => downloads.pause(id);
   } else if (d?.status === 'queued') {
-    label = 'En attente';
+    label = t("En attente");
     icon = 'pause';
     action = () => downloads.pause(id);
   } else if (d?.status === 'paused' || d?.status === 'error') {
-    label = d.status === 'error' ? 'Réessayer' : 'Reprendre';
+    label = d.status === 'error' ? t("Réessayer") : t("Reprendre");
     icon = 'refresh';
     action = () => downloads.resume(id);
   }

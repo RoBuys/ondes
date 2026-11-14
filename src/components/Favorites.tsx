@@ -5,6 +5,7 @@ import { fmtTime } from '../lib/util';
 import { nowAndNext, programmesFor, progressOf } from '../lib/xmltv';
 import { Empty, Icon, Img, useNow } from './ui';
 import { MovieDetail, PosterCard, ShowDetail } from './Vod';
+import { t } from '../lib/i18n';
 
 /** "Favorites" tab: starred channels, movies and series of the active source. */
 export function FavoritesView() {
@@ -25,8 +26,8 @@ export function FavoritesView() {
   if (!catalog) return null;
   if (!fav.live.length && !fav.movies.length && !fav.series.length) {
     return (
-      <Empty title="Aucun favori" icon="star">
-        Cliquez sur l’étoile d’une chaîne, d’un film ou d’une série pour la retrouver ici.
+      <Empty title={t("Aucun favori")} icon="star">
+        {t("Cliquez sur l’étoile d’une chaîne, d’un film ou d’une série pour la retrouver ici.")}
       </Empty>
     );
   }
@@ -36,7 +37,7 @@ export function FavoritesView() {
       {fav.live.length > 0 && (
         <section>
           <h3>
-            Chaînes <span className="muted">({fav.live.length})</span>
+            {t("Chaînes")} <span className="muted">({fav.live.length})</span>
           </h3>
           <div className="fav-channels">
             {fav.live.map((ch) => {
@@ -80,7 +81,7 @@ export function FavoritesView() {
                       e.stopPropagation();
                       toggleFav(ch.id);
                     }}
-                    aria-label="Retirer des favoris"
+                    aria-label={t("Retirer des favoris")}
                   >
                     <Icon name="star" size={17} filled />
                   </button>
@@ -94,11 +95,11 @@ export function FavoritesView() {
       {fav.movies.length > 0 && (
         <section>
           <h3>
-            Films <span className="muted">({fav.movies.length})</span>
+            {t("Films")} <span className="muted">({fav.movies.length})</span>
           </h3>
           <div className="poster-grid">
             {fav.movies.map((m) => (
-              <PosterCard key={m.id} item={m} label="Film" onOpen={() => setMovie(m)} />
+              <PosterCard key={m.id} item={m} label={t("Film")} onOpen={() => setMovie(m)} />
             ))}
           </div>
         </section>
@@ -107,11 +108,11 @@ export function FavoritesView() {
       {fav.series.length > 0 && (
         <section>
           <h3>
-            Séries <span className="muted">({fav.series.length})</span>
+            {t("Séries")} <span className="muted">({fav.series.length})</span>
           </h3>
           <div className="poster-grid">
             {fav.series.map((s) => (
-              <PosterCard key={s.id} item={s} label="Série" onOpen={() => setShow(s)} />
+              <PosterCard key={s.id} item={s} label={t("Série")} onOpen={() => setShow(s)} />
             ))}
           </div>
         </section>

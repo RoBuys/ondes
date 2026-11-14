@@ -4,7 +4,10 @@ import App from './App';
 import { SelfTest, type SelfTestItem } from './components/SelfTest';
 import { mpvInit } from './lib/mpv';
 import { initNet, isTauri } from './lib/net';
+import { lang } from './lib/i18n';
 import { prefs } from './lib/store';
+
+document.documentElement.lang = lang;
 import './styles.css';
 
 async function selfTestItems(): Promise<SelfTestItem[] | null> {
@@ -22,6 +25,11 @@ async function selfTestItems(): Promise<SelfTestItem[] | null> {
   await initNet();
   if (isTauri && prefs.settings().engine !== 'web') {
     const info = await mpvInit();
+    // Prefer audio in the interface language (French broadcasts often carry English or audio-description tracks).
+    if (info) {
+      const { mpv } = await import('./lib/mpv');
+      await mpv.set('alang', lang === 'en' ? 'eng,en,english,fre,fra,fr' : 'fre,fra,fr,french,eng,en').catch(() => {});
+    }
     const { diag } = await import('./lib/diag');
     diag('mpv', info ?? 'indisponible');
   }

@@ -4,11 +4,12 @@ import { emptyRules, rawGroups, type ContentRules, type Kind } from '../lib/cont
 import { newList, toggleInList, type ChannelList } from '../lib/lists';
 import { cx, makeSearch } from '../lib/util';
 import { Icon, Modal } from './ui';
+import { t } from '../lib/i18n';
 
 const KINDS: { id: Kind; label: string }[] = [
-  { id: 'l', label: 'Chaînes' },
-  { id: 'm', label: 'Films' },
-  { id: 's', label: 'Séries' },
+  { id: 'l', label: t("Chaînes") },
+  { id: 'm', label: t("Films") },
+  { id: 's', label: t("Séries") },
 ];
 
 /** "Organize" window: groups (visibility, name, order) and hidden items. */
@@ -28,9 +29,9 @@ export function OrganizeModal({ onClose, initialKind = 'l' }: { onClose: () => v
     if (!rawCatalog) return [];
     const ids = new Set(rules.hiddenItems);
     const all = [
-      ...rawCatalog.live.map((x) => ({ ...x, kind: 'Chaîne' })),
-      ...rawCatalog.movies.map((x) => ({ ...x, kind: 'Film' })),
-      ...rawCatalog.series.map((x) => ({ ...x, kind: 'Série' })),
+      ...rawCatalog.live.map((x) => ({ ...x, kind: t("Chaîne") })),
+      ...rawCatalog.movies.map((x) => ({ ...x, kind: t("Film") })),
+      ...rawCatalog.series.map((x) => ({ ...x, kind: t("Série") })),
     ];
     return all.filter((x) => ids.has(x.id));
   }, [rawCatalog, rules.hiddenItems]);
@@ -90,10 +91,9 @@ export function OrganizeModal({ onClose, initialKind = 'l' }: { onClose: () => v
   return (
     <Modal onClose={onClose} className="organize">
       <div>
-        <h2>Organiser « {active.name} »</h2>
+        <h2>{t('Organiser « {name} »', { name: active.name })}</h2>
         <p className="muted small">
-          Glissez les groupes pour les réordonner, décochez-les pour les masquer. Donner le même nom à deux groupes les fusionne.
-          Clic droit sur une chaîne, un film ou une série pour la renommer ou la masquer.
+          {t("Glissez les groupes pour les réordonner, décochez-les pour les masquer. Donner le même nom à deux groupes les fusionne. Clic droit sur une chaîne, un film ou une série pour la renommer ou la masquer.")}
         </p>
       </div>
 
@@ -104,7 +104,7 @@ export function OrganizeModal({ onClose, initialKind = 'l' }: { onClose: () => v
           </button>
         ))}
         <button type="button" className={cx('tab', tab === 'lists' && 'on')} onClick={() => setTab('lists')}>
-          <Icon name="list" size={15} /> Mes listes
+          <Icon name="list" size={15} /> {t("Mes listes")}
         </button>
       </div>
 
@@ -115,32 +115,32 @@ export function OrganizeModal({ onClose, initialKind = 'l' }: { onClose: () => v
       <div className="row">
         <label className="search org-filter">
           <Icon name="search" size={16} />
-          <input value={q} onChange={(e) => setQ(e.target.value)} placeholder="Filtrer les groupes (ex. FR, Sport)" spellCheck={false} />
+          <input value={q} onChange={(e) => setQ(e.target.value)} placeholder={t("Filtrer les groupes (ex. FR, Sport)")} spellCheck={false} />
           {q && <span className="muted small">{shown.length}/{groups.length}</span>}
         </label>
       </div>
       <div className="row">
         <button className="btn ghost" onClick={() => allVisible(true)}>
-          {q ? 'Afficher ces groupes' : 'Tout afficher'}
+          {q ? t("Afficher ces groupes") : t("Tout afficher")}
         </button>
         <button className="btn ghost" onClick={() => allVisible(false)}>
-          {q ? 'Masquer ces groupes' : 'Tout masquer'}
+          {q ? t("Masquer ces groupes") : t("Tout masquer")}
         </button>
         {q && (
           <button className="btn ghost" onClick={onlyThese}>
-            N’afficher que ceux-ci
+            {t("N’afficher que ceux-ci")}
           </button>
         )}
         <button className="btn ghost" onClick={sortAlpha}>
-          Trier de A à Z
+          {t("Trier de A à Z")}
         </button>
         <button className="btn ghost" onClick={() => setOrder([])}>
-          Ordre d’origine
+          {t("Ordre d’origine")}
         </button>
       </div>
 
       {groups.length === 0 ? (
-        <div className="pane-empty">Aucun groupe de ce type.</div>
+        <div className="pane-empty">{t("Aucun groupe de ce type.")}</div>
       ) : (
         <div className="org-list">
           {groups.map((g, i) => {
@@ -177,7 +177,7 @@ export function OrganizeModal({ onClose, initialKind = 'l' }: { onClose: () => v
                   type="checkbox"
                   checked={!hidden}
                   onChange={() => toggleHidden(g.key)}
-                  aria-label={hidden ? 'Afficher le groupe' : 'Masquer le groupe'}
+                  aria-label={hidden ? t("Afficher le groupe") : t("Masquer le groupe")}
                 />
                 <input
                   className="org-name"
@@ -185,16 +185,16 @@ export function OrganizeModal({ onClose, initialKind = 'l' }: { onClose: () => v
                   placeholder={g.group}
                   onBlur={(e) => rename(g.key, g.group, e.target.value)}
                   onKeyDown={(e) => e.key === 'Enter' && (e.target as HTMLInputElement).blur()}
-                  title={rules.groupNames[g.key] ? `Nom d’origine : ${g.group}` : undefined}
+                  title={rules.groupNames[g.key] ? t('Nom d’origine : {name}', { name: g.group }) : undefined}
                 />
                 <span className="group-count">{g.count}</span>
-                <button className="icon-btn sm" onClick={() => move(i, 0)} disabled={i === 0} title="Tout en haut">
+                <button className="icon-btn sm" onClick={() => move(i, 0)} disabled={i === 0} title={t("Tout en haut")}>
                   <Icon name="top" size={16} />
                 </button>
-                <button className="icon-btn sm" onClick={() => move(i, i - 1)} disabled={i === 0} title="Monter">
+                <button className="icon-btn sm" onClick={() => move(i, i - 1)} disabled={i === 0} title={t("Monter")}>
                   <Icon name="up" size={16} />
                 </button>
-                <button className="icon-btn sm" onClick={() => move(i, i + 1)} disabled={i === groups.length - 1} title="Descendre">
+                <button className="icon-btn sm" onClick={() => move(i, i + 1)} disabled={i === groups.length - 1} title={t("Descendre")}>
                   <Icon name="down" size={16} />
                 </button>
               </div>
@@ -208,7 +208,7 @@ export function OrganizeModal({ onClose, initialKind = 'l' }: { onClose: () => v
 
       {hiddenItems.length > 0 && (
         <div className="org-hidden">
-          <div className="section-label">Éléments masqués ({hiddenItems.length})</div>
+          <div className="section-label">{t('Éléments masqués ({n})', { n: hiddenItems.length })}</div>
           {hiddenItems.map((it) => (
             <div key={it.id} className="org-hidden-row">
               <span className="muted small">{it.kind}</span>
@@ -217,7 +217,7 @@ export function OrganizeModal({ onClose, initialKind = 'l' }: { onClose: () => v
                 className="btn ghost"
                 onClick={() => update((r) => ({ ...r, hiddenItems: r.hiddenItems.filter((x) => x !== it.id) }))}
               >
-                Réafficher
+                {t("Réafficher")}
               </button>
             </div>
           ))}
@@ -233,15 +233,15 @@ export function OrganizeModal({ onClose, initialKind = 'l' }: { onClose: () => v
               setConfirmReset(false);
             }}
           >
-            Confirmer la réinitialisation
+            {t("Confirmer la réinitialisation")}
           </button>
         ) : (
           <button className="btn ghost" onClick={() => setConfirmReset(true)}>
-            Tout réinitialiser
+            {t("Tout réinitialiser")}
           </button>
         )}
         <button className="btn" onClick={onClose}>
-          Terminé
+          {t("Terminé")}
         </button>
       </div>
     </Modal>
@@ -283,7 +283,7 @@ export function ItemModal({ target, onClose }: { target: ItemTarget; onClose: ()
         }}
       >
         <label className="field">
-          <span>Nom affiché</span>
+          <span>{t("Nom affiché")}</span>
           <input
             value={name}
             onChange={(e) => setName(e.target.value)}
@@ -292,14 +292,14 @@ export function ItemModal({ target, onClose }: { target: ItemTarget; onClose: ()
             placeholder={target.original}
           />
         </label>
-        {target.name !== target.original && <div className="muted small">Nom d’origine : {target.original}</div>}
+        {target.name !== target.original && <div className="muted small">{t("Nom d’origine :")} {target.original}</div>}
         <div className="row">
-          <button className="btn">Enregistrer</button>
+          <button className="btn">{t("Enregistrer")}</button>
           <button type="button" className="btn ghost" onClick={() => setName(target.original)}>
-            Nom d’origine
+            {t("Nom d’origine")}
           </button>
           <button type="button" className={cx('btn ghost', favs.has(target.id) && 'active')} onClick={() => toggleFav(target.id)}>
-            <Icon name="star" size={16} filled={favs.has(target.id)} /> {favs.has(target.id) ? 'Favori' : 'Favoris'}
+            <Icon name="star" size={16} filled={favs.has(target.id)} /> {favs.has(target.id) ? t("Favori") : t("Favoris")}
           </button>
           <div className="topbar-spacer" />
           <button
@@ -310,7 +310,7 @@ export function ItemModal({ target, onClose }: { target: ItemTarget; onClose: ()
               onClose();
             }}
           >
-            <Icon name="eyeoff" size={16} /> Masquer
+            <Icon name="eyeoff" size={16} /> {t("Masquer")}
           </button>
         </div>
       </form>
@@ -326,8 +326,8 @@ export function ListPicker({ channelId }: { channelId: string }) {
   const [name, setName] = useState('');
   return (
     <div className="list-picker">
-      <div className="section-label">Mes listes</div>
-      {lists.length === 0 && <div className="muted small">Aucune liste pour l’instant : créez-en une ci-dessous.</div>}
+      <div className="section-label">{t("Mes listes")}</div>
+      {lists.length === 0 && <div className="muted small">{t("Aucune liste pour l’instant : créez-en une ci-dessous.")}</div>}
       {lists.map((l) => (
         <label key={l.id} className="list-check">
           <input type="checkbox" checked={l.ids.includes(channelId)} onChange={() => setLists(toggleInList(lists, l.id, channelId))} />
@@ -345,9 +345,9 @@ export function ListPicker({ channelId }: { channelId: string }) {
           setName('');
         }}
       >
-        <input className="list-new" value={name} onChange={(e) => setName(e.target.value)} placeholder="Nouvelle liste (ex. Sport)" />
+        <input className="list-new" value={name} onChange={(e) => setName(e.target.value)} placeholder={t("Nouvelle liste (ex. Sport)")} />
         <button className="btn ghost" disabled={!name.trim()}>
-          <Icon name="plus" size={15} /> Créer et ajouter
+          <Icon name="plus" size={15} /> {t("Créer et ajouter")}
         </button>
       </form>
     </div>
@@ -388,10 +388,10 @@ function ListsManager() {
           <div key={l.id} className={cx('lists-row', l.id === sel && 'on')} onClick={() => (setSel(l.id), setConfirmDel(false))}>
             <span className="ellipsis">{l.name}</span>
             <span className="group-count">{l.ids.length}</span>
-            <button className="icon-btn sm" onClick={(e) => (e.stopPropagation(), moveList(i, -1))} disabled={i === 0} title="Monter">
+            <button className="icon-btn sm" onClick={(e) => (e.stopPropagation(), moveList(i, -1))} disabled={i === 0} title={t("Monter")}>
               <Icon name="up" size={15} />
             </button>
-            <button className="icon-btn sm" onClick={(e) => (e.stopPropagation(), moveList(i, 1))} disabled={i === lists.length - 1} title="Descendre">
+            <button className="icon-btn sm" onClick={(e) => (e.stopPropagation(), moveList(i, 1))} disabled={i === lists.length - 1} title={t("Descendre")}>
               <Icon name="down" size={15} />
             </button>
           </div>
@@ -407,8 +407,8 @@ function ListsManager() {
             setName('');
           }}
         >
-          <input className="list-new" value={name} onChange={(e) => setName(e.target.value)} placeholder="Nouvelle liste" />
-          <button className="icon-btn" disabled={!name.trim()} title="Créer">
+          <input className="list-new" value={name} onChange={(e) => setName(e.target.value)} placeholder={t("Nouvelle liste")} />
+          <button className="icon-btn" disabled={!name.trim()} title={t("Créer")}>
             <Icon name="plus" size={18} />
           </button>
         </form>
@@ -416,7 +416,7 @@ function ListsManager() {
 
       <div className="lists-main">
         {!cur ? (
-          <div className="pane-empty">Créez une liste, puis ajoutez-y des chaînes par clic droit ou avec le bouton « Listes » sous le lecteur.</div>
+          <div className="pane-empty">{t("Créez une liste, puis ajoutez-y des chaînes par clic droit ou avec le bouton « Listes » sous le lecteur.")}</div>
         ) : (
           <>
             <div className="row">
@@ -426,7 +426,7 @@ function ListsManager() {
                 defaultValue={cur.name}
                 onBlur={(e) => e.target.value.trim() && patch(cur.id, (l) => ({ ...l, name: e.target.value.trim() }))}
                 onKeyDown={(e) => e.key === 'Enter' && (e.target as HTMLInputElement).blur()}
-                aria-label="Nom de la liste"
+                aria-label={t("Nom de la liste")}
               />
               {confirmDel ? (
                 <button
@@ -437,16 +437,16 @@ function ListsManager() {
                     setConfirmDel(false);
                   }}
                 >
-                  Supprimer la liste
+                  {t("Supprimer la liste")}
                 </button>
               ) : (
-                <button className="icon-btn" onClick={() => setConfirmDel(true)} title="Supprimer la liste">
+                <button className="icon-btn" onClick={() => setConfirmDel(true)} title={t("Supprimer la liste")}>
                   <Icon name="trash" size={18} />
                 </button>
               )}
             </div>
             {cur.ids.length === 0 ? (
-              <div className="pane-empty">Liste vide : clic droit sur une chaîne → « Mes listes ».</div>
+              <div className="pane-empty">{t("Liste vide : clic droit sur une chaîne → « Mes listes ».")}</div>
             ) : (
               <div className="org-list">
                 {cur.ids.map((id, i) => {
@@ -454,21 +454,21 @@ function ListsManager() {
                   return (
                     <div key={id} className="org-row">
                       <span className="ellipsis" style={{ flex: 1 }}>
-                        {ch ? (rules.itemNames[id] ?? ch.name) : <span className="muted">Chaîne absente de la playlist</span>}
+                        {ch ? (rules.itemNames[id] ?? ch.name) : <span className="muted">{t("Chaîne absente de la playlist")}</span>}
                       </span>
                       <span className="muted small ellipsis" style={{ maxWidth: 160 }}>
                         {ch?.group}
                       </span>
-                      <button className="icon-btn sm" onClick={() => moveItem(i, -1)} disabled={i === 0} title="Monter">
+                      <button className="icon-btn sm" onClick={() => moveItem(i, -1)} disabled={i === 0} title={t("Monter")}>
                         <Icon name="up" size={16} />
                       </button>
-                      <button className="icon-btn sm" onClick={() => moveItem(i, 1)} disabled={i === cur.ids.length - 1} title="Descendre">
+                      <button className="icon-btn sm" onClick={() => moveItem(i, 1)} disabled={i === cur.ids.length - 1} title={t("Descendre")}>
                         <Icon name="down" size={16} />
                       </button>
                       <button
                         className="icon-btn sm"
                         onClick={() => patch(cur.id, (l) => ({ ...l, ids: l.ids.filter((x) => x !== id) }))}
-                        title="Retirer de la liste"
+                        title={t("Retirer de la liste")}
                       >
                         <Icon name="x" size={16} />
                       </button>

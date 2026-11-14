@@ -43,7 +43,7 @@ pub fn start(log: Option<std::path::PathBuf>) -> Result<ProxyInfo, String> {
     let port = std_listener.local_addr().map_err(|e| e.to_string())?.port();
     let token = random_token()?;
     let client = reqwest::Client::builder()
-        .user_agent("Mozilla/5.0 Ondes/0.3.1")
+        .user_agent("Mozilla/5.0 Ondes/0.4.0")
         .connect_timeout(std::time::Duration::from_secs(20))
         .build()
         .map_err(|e| e.to_string())?;

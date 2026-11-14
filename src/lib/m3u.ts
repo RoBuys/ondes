@@ -1,3 +1,4 @@
+import { t } from './i18n';
 export interface M3UEntry {
   name: string;
   url: string;
@@ -31,10 +32,10 @@ export function parseM3U(text: string): { entries: M3UEntry[]; epgUrl?: string }
 
     const info = pending ?? { name: decodeURIComponentSafe(line.split('/').pop() || line), attrs: {} };
     entries.push({
-      name: info.name || 'Sans nom',
+      name: info.name || t("Sans nom"),
       url: line,
       attrs: info.attrs,
-      group: info.attrs['group-title'] || grp || 'Sans groupe',
+      group: info.attrs['group-title'] || grp || t("Sans groupe"),
     });
     pending = null;
     grp = undefined;

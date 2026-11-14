@@ -1,7 +1,7 @@
 # Ondes — stream player for macOS (Apple Silicon) and Windows
 
-Desktop app (Tauri 2 + React) to watch your stream sources. The interface is in French; menu names are
-given below in French (*italics*) with their English meaning.
+Desktop app (Tauri 2 + React) to watch your stream sources. The interface is available in **English and French**
+(follows the system language; *Settings → Language* to switch). Menu names are given below in English.
 
 - **Sources**: M3U link, imported M3U file, **Xtream Codes** account (several sources supported).
 - **Live** (*Direct*): channels by group, search, favorites, keyboard zapping (↑ ↓), current and upcoming programme.
@@ -65,6 +65,12 @@ On Windows, WebView2 runs without CORS and does not need it.
 - `src-tauri/Entitlements.plist` allows loading these libraries and LuaJIT's JIT (hardened runtime).
 - Diagnostics: log at `~/Library/Logs/com.robertbuys.ondes/ondes.log`; development builds have a self-test driven by
   the `ONDES_SELFTEST` variable (JSON list of streams to play).
+
+## Translations
+
+French strings are the translation keys: `t('Réessayer')` returns "Réessayer" or "Retry" (`src/lib/i18n.ts`).
+English translations live in `src/lib/i18n-en.ts`; a missing entry falls back to French. Placeholders use
+`{name}` and must match in both languages.
 
 ## Layout
 

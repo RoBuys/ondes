@@ -1,5 +1,6 @@
 import type { Channel, Epg, Programme } from './types';
 import { normName } from './util';
+import { t } from './i18n';
 
 /** "20261108203000 +0100" → timestamp in ms */
 export function parseXmltvDate(s: string): number {
@@ -71,7 +72,7 @@ export function parseXmltv(text: string, channels: Channel[], from: number, to: 
     (byId[ch] ||= []).push({
       start,
       stop,
-      title: title ? decodeXml(title[1]) : 'Sans titre',
+      title: title ? decodeXml(title[1]) : t("Sans titre"),
       desc: desc ? decodeXml(desc[1]) : undefined,
     });
   }

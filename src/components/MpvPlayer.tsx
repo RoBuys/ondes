@@ -6,6 +6,7 @@ import { clearPosition, getPosition, prefs, setPosition } from '../lib/store';
 import type { PlaySpec } from '../lib/types';
 import { cx } from '../lib/util';
 import { copyText, Icon } from './ui';
+import { t } from '../lib/i18n';
 
 const MAX_RECONNECTS = 8;
 
@@ -25,8 +26,8 @@ const fmt = (s?: number) => {
 };
 
 const LANGS: Record<string, string> = {
-  fre: 'Français', fra: 'Français', fr: 'Français', eng: 'Anglais', en: 'Anglais', ger: 'Allemand', deu: 'Allemand',
-  spa: 'Espagnol', ita: 'Italien', ara: 'Arabe', por: 'Portugais', nld: 'Néerlandais', dut: 'Néerlandais', qad: 'Audiodescription',
+  fre: t("Français"), fra: t("Français"), fr: t("Français"), eng: t("Anglais"), en: t("Anglais"), ger: t("Allemand"), deu: t("Allemand"),
+  spa: t("Espagnol"), ita: t("Italien"), ara: t("Arabe"), por: t("Portugais"), nld: t("Néerlandais"), dut: t("Néerlandais"), qad: t("Audiodescription"),
 };
 
 function trackLabel(t: MpvTrack, i: number) {
@@ -185,9 +186,9 @@ export function MpvPlayer({ spec, mode, onClose }: { spec: PlaySpec; mode: 'inli
           } else if (e.event === 'file-loaded') {
             mpv.tracks().then((t) => !disposed && setTracks(t)).catch(() => {});
           } else if (e.event === 'end-file') {
-            if (e.reason === 'error') fail(e.error ?? 'erreur de lecture');
+            if (e.reason === 'error') fail(e.error ?? t("erreur de lecture"));
             else if (e.reason === 'eof') {
-              if (live) fail('fin du flux');
+              if (live) fail(t("fin du flux"));
               else {
                 if (spec.resumeKey) clearPosition(spec.resumeKey);
                 spec.onEnded?.();
@@ -254,7 +255,7 @@ export function MpvPlayer({ spec, mode, onClose }: { spec: PlaySpec; mode: 'inli
       lastPos = p;
       if (frozen >= (live ? 15 : 30)) {
         frozen = 0;
-        fail('flux figé');
+        fail(t("flux figé"));
       }
     }, 2000);
 
@@ -338,7 +339,7 @@ export function MpvPlayer({ spec, mode, onClose }: { spec: PlaySpec; mode: 'inli
 
       {(mode === 'overlay' || fullscreen) && (
         <div className="player-top">
-          <button className="icon-btn" onClick={fullscreen && mode !== 'overlay' ? toggleFullscreen : onClose} aria-label="Retour">
+          <button className="icon-btn" onClick={fullscreen && mode !== 'overlay' ? toggleFullscreen : onClose} aria-label={t("Retour")}>
             <Icon name="back" size={22} />
           </button>
           <div className="player-titles">
@@ -353,7 +354,7 @@ export function MpvPlayer({ spec, mode, onClose }: { spec: PlaySpec; mode: 'inli
           <span className="spinner" />
           {status.reconnecting && (
             <span className="player-reconnect">
-              Connexion perdue — reconnexion ({status.reconnecting}/{MAX_RECONNECTS})…
+              {t('Connexion perdue — reconnexion ({n}/{max})…', { n: status.reconnecting, max: MAX_RECONNECTS })}
             </span>
           )}
         </div>
@@ -361,11 +362,11 @@ export function MpvPlayer({ spec, mode, onClose }: { spec: PlaySpec; mode: 'inli
 
       {status.error && (
         <div className="player-msg error">
-          <strong>Impossible de lire ce flux</strong>
+          <strong>{t("Impossible de lire ce flux")}</strong>
           <small>{status.error}</small>
           <div className="row">
             <button className="btn" onClick={() => setRetry((r) => r + 1)}>
-              <Icon name="refresh" size={16} /> Réessayer
+              <Icon name="refresh" size={16} /> {t("Réessayer")}
             </button>
             <button
               className="btn ghost"
@@ -376,7 +377,7 @@ export function MpvPlayer({ spec, mode, onClose }: { spec: PlaySpec; mode: 'inli
                 }
               }}
             >
-              <Icon name={copied ? 'check' : 'copy'} size={16} /> {copied ? 'Copiée' : "Copier l'adresse"}
+              <Icon name={copied ? 'check' : 'copy'} size={16} /> {copied ? t("Copiée") : t("Copier l'adresse")}
             </button>
           </div>
         </div>
@@ -402,32 +403,32 @@ export function MpvPlayer({ spec, mode, onClose }: { spec: PlaySpec; mode: 'inli
                 if (seekPreview != null) mpv.command('seek', seekPreview, 'absolute').catch(() => {});
                 setSeekPreview(null);
               }}
-              aria-label="Position"
+              aria-label={t("Position")}
             />
             <span className="mpv-time">{fmt(duration)}</span>
           </div>
         ) : null}
         <div className="mpv-bar">
-          <button className="icon-btn" onClick={togglePause} aria-label={paused ? 'Lecture' : 'Pause'}>
+          <button className="icon-btn" onClick={togglePause} aria-label={paused ? t("Lecture") : t("Pause")}>
             <Icon name={paused ? 'play' : 'pause'} size={20} filled={paused} />
           </button>
           {!live && (
             <>
-              <button className="icon-btn" onClick={() => seekBy(-10)} title="Reculer de 10 s">
+              <button className="icon-btn" onClick={() => seekBy(-10)} title={t("Reculer de 10 s")}>
                 <Icon name="left" size={20} />
               </button>
-              <button className="icon-btn" onClick={() => seekBy(30)} title="Avancer de 30 s">
+              <button className="icon-btn" onClick={() => seekBy(30)} title={t("Avancer de 30 s")}>
                 <Icon name="right" size={20} />
               </button>
             </>
           )}
           {live && (
             <span className="mpv-live">
-              <span className="live-dot" /> Direct
+              <span className="live-dot" /> {t("Direct")}
             </span>
           )}
           <div className="mpv-volume">
-            <button className="icon-btn" onClick={() => mpv.command('cycle', 'mute').catch(() => {})} aria-label="Muet">
+            <button className="icon-btn" onClick={() => mpv.command('cycle', 'mute').catch(() => {})} aria-label={t("Muet")}>
               <Icon name={muted || volume === 0 ? 'mute' : 'volume'} size={20} />
             </button>
             <input
@@ -437,14 +438,14 @@ export function MpvPlayer({ spec, mode, onClose }: { spec: PlaySpec; mode: 'inli
               value={muted ? 0 : volume}
               style={{ ['--pct' as string]: `${muted ? 0 : volume}%` }}
               onChange={(e) => setVol(Number(e.target.value))}
-              aria-label="Volume"
+              aria-label={t("Volume")}
             />
           </div>
           <div className="topbar-spacer" />
           {audio.length > 1 && (
             <div className="mpv-menu-wrap">
               <button className={cx('btn ghost sm', menu === 'audio' && 'active')} onClick={() => setMenu(menu === 'audio' ? null : 'audio')}>
-                <Icon name="volume" size={15} /> Audio
+                <Icon name="volume" size={15} /> {t("Audio")}
               </button>
               {menu === 'audio' && (
                 <div className="mpv-menu">
@@ -478,7 +479,7 @@ export function MpvPlayer({ spec, mode, onClose }: { spec: PlaySpec; mode: 'inli
                       setMenu(null);
                     }}
                   >
-                    {!subs.some((s) => s.selected) && <Icon name="check" size={14} />} Désactivés
+                    {!subs.some((s) => s.selected) && <Icon name="check" size={14} />} {t("Désactivés")}
                   </button>
                   {subs.map((t, i) => (
                     <button
@@ -496,7 +497,7 @@ export function MpvPlayer({ spec, mode, onClose }: { spec: PlaySpec; mode: 'inli
               )}
             </div>
           )}
-          <button className="icon-btn" onClick={toggleFullscreen} title="Plein écran (F)" aria-label="Plein écran">
+          <button className="icon-btn" onClick={toggleFullscreen} title={t("Plein écran (F)")} aria-label={t("Plein écran")}>
             <Icon name="expand" size={19} />
           </button>
         </div>

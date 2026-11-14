@@ -1,3 +1,5 @@
+import { locale } from './i18n';
+
 export function hash(s: string): string {
   let h = 5381;
   for (let i = 0; i < s.length; i++) h = ((h << 5) + h + s.charCodeAt(i)) | 0;
@@ -24,15 +26,15 @@ export function makeSearch(q: string): ((s: string) => boolean) | null {
 }
 
 export const fmtTime = (t: number) =>
-  new Date(t).toLocaleTimeString('fr-FR', { hour: '2-digit', minute: '2-digit' });
+  new Date(t).toLocaleTimeString(locale, { hour: '2-digit', minute: '2-digit' });
 
 export const fmtDay = (t: number) =>
-  new Date(t).toLocaleDateString('fr-FR', { weekday: 'long', day: 'numeric', month: 'long' });
+  new Date(t).toLocaleDateString(locale, { weekday: 'long', day: 'numeric', month: 'long' });
 
 export const fmtDate = (t: number) =>
-  new Date(t).toLocaleDateString('fr-FR', { day: 'numeric', month: 'long', year: 'numeric' });
+  new Date(t).toLocaleDateString(locale, { day: 'numeric', month: 'long', year: 'numeric' });
 
-export const fmtCount = (n: number) => n.toLocaleString('fr-FR');
+export const fmtCount = (n: number) => n.toLocaleString(locale);
 
 export function errMsg(e: unknown): string {
   if (e instanceof Error) return e.message;

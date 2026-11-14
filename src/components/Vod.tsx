@@ -4,10 +4,11 @@ import { downloadsAvailable, localSrc } from '../lib/downloads';
 import { mediaSrc } from '../lib/net';
 import { getPosition, getPositions } from '../lib/store';
 import type { Episode, Movie, Show } from '../lib/types';
-import { cx, errMsg, makeSearch } from '../lib/util';
+import { cx, errMsg, fmtCount, makeSearch } from '../lib/util';
 import { xtSeriesInfo, xtVodInfo, type ExtraInfo } from '../lib/xtream';
 import { DownloadButton } from './Downloads';
 import { Empty, GroupList, Icon, Img, Modal, SearchBox, copyText, type GroupItem } from './ui';
+import { plural, t } from '../lib/i18n';
 
 const FAV = '__fav';
 const ALL = '__all';
@@ -23,11 +24,11 @@ function useGroups<T extends Item>(items: T[], favs: Set<string>, contIds: Set<s
     const out: GroupItem[] = [];
     if (contIds) {
       const n = items.reduce((k, m) => k + (contIds.has(m.id) ? 1 : 0), 0);
-      if (n) out.push({ id: CONT, label: 'Continuer', count: n, icon: 'play' });
+      if (n) out.push({ id: CONT, label: t("Continuer"), count: n, icon: 'play' });
     }
     out.push(
-      { id: FAV, label: 'Favoris', count: items.reduce((k, m) => k + (favs.has(m.id) ? 1 : 0), 0), icon: 'star' },
-      { id: ALL, label: 'Tout', count: items.length, icon: 'film' },
+      { id: FAV, label: t("Favoris"), count: items.reduce((k, m) => k + (favs.has(m.id) ? 1 : 0), 0), icon: 'star' },
+      { id: ALL, label: t("Tout"), count: items.length, icon: 'film' },
       ...[...counts].map(([g, n]) => ({ id: g, label: g, count: n })),
     );
     return out;
@@ -64,8 +65,8 @@ function Browser<T extends Item>({
 
   if (!items.length) {
     return (
-      <Empty title={kind === 'movies' ? 'Aucun film' : 'Aucune série'} icon={kind === 'movies' ? 'film' : 'series'}>
-        Cette source ne propose pas de {kind === 'movies' ? 'films' : 'séries'}.
+      <Empty title={kind === 'movies' ? t("Aucun film") : t("Aucune série")} icon={kind === 'movies' ? 'film' : 'series'}>
+        {kind === 'movies' ? t('Cette source ne propose pas de films.') : t('Cette source ne propose pas de séries.')}
       </Empty>
     );
   }
@@ -80,8 +81,8 @@ function Browser<T extends Item>({
       />
       <div className="vod-main">
         <div className="pane-head">
-          <SearchBox value={q} onChange={setQ} placeholder={kind === 'movies' ? 'Rechercher un film' : 'Rechercher une série'} />
-          <span className="muted small">{list.length.toLocaleString('fr-FR')} titres</span>
+          <SearchBox value={q} onChange={setQ} placeholder={kind === 'movies' ? t("Rechercher un film") : t("Rechercher une série")} />
+          <span className="muted small">{t(plural(list.length, '{n} titre', '{n} titres'), { n: fmtCount(list.length) })}</span>
         </div>
         <div
           className="poster-scroll"
@@ -92,11 +93,11 @@ function Browser<T extends Item>({
           }}
         >
           {list.length === 0 ? (
-            <div className="pane-empty">{q ? 'Aucun résultat.' : 'Rien ici pour l’instant.'}</div>
+            <div className="pane-empty">{q ? t("Aucun résultat.") : t("Rien ici pour l’instant.")}</div>
           ) : (
             <div className="poster-grid">
               {list.slice(0, limit).map((m) => (
-                <PosterCard key={m.id} item={m} label={kind === 'movies' ? 'Film' : 'Série'} onOpen={() => onOpen(m)} />
+                <PosterCard key={m.id} item={m} label={kind === 'movies' ? t("Film") : t("Série")} onOpen={() => onOpen(m)} />
               ))}
             </div>
           )}
@@ -124,7 +125,7 @@ export function PosterCard({ item, onOpen, label }: { item: Item; onOpen: () => 
         <span
           className={cx('poster-fav', fav && 'on')}
           role="button"
-          title={fav ? 'Retirer des favoris' : 'Ajouter aux favoris'}
+          title={fav ? t("Retirer des favoris") : t("Ajouter aux favoris")}
           onClick={(e) => {
             e.stopPropagation();
             toggleFav(item.id);
@@ -189,7 +190,7 @@ export function MovieDetail({ movie, onClose }: { movie: Movie; onClose: () => v
     play({
       key: movie.id,
       title: movie.name,
-      subtitle: local ? `${movie.year ?? ''} · fichier téléchargé`.replace(/^ · /, '') : movie.year,
+      subtitle: local ? [movie.year, t('fichier téléchargé')].filter(Boolean).join(' · ') : movie.year,
       urls: local ? [local, movie.url] : [movie.url],
       live: false,
       resumeKey: movie.id,
@@ -209,10 +210,10 @@ export function MovieDetail({ movie, onClose }: { movie: Movie; onClose: () => v
           {meta.length > 0 && <div className="detail-meta">{meta.join(' · ')}</div>}
           <div className="row">
             <button className="btn" onClick={start}>
-              <Icon name="play" size={16} filled /> {pos ? 'Reprendre' : 'Lecture'}
+              <Icon name="play" size={16} filled /> {pos ? t("Reprendre") : t("Lecture")}
             </button>
             <button className={cx('btn ghost', favs.has(movie.id) && 'active')} onClick={() => toggleFav(movie.id)}>
-              <Icon name="star" size={16} filled={favs.has(movie.id)} /> {favs.has(movie.id) ? 'Favori' : 'Favoris'}
+              <Icon name="star" size={16} filled={favs.has(movie.id)} /> {favs.has(movie.id) ? t("Favori") : t("Favoris")}
             </button>
             <DownloadButton
               id={movie.id}
@@ -235,9 +236,9 @@ export function MovieDetail({ movie, onClose }: { movie: Movie; onClose: () => v
               onClick={async () => {
                 if (await copyText(movie.url)) setCopied(true);
               }}
-              title="Pour l’ouvrir dans un autre lecteur (VLC…)"
+              title={t("Pour l’ouvrir dans un autre lecteur (VLC…)")}
             >
-              <Icon name={copied ? 'check' : 'copy'} size={16} /> {copied ? 'Copiée' : 'Copier le lien'}
+              <Icon name={copied ? 'check' : 'copy'} size={16} /> {copied ? t("Copiée") : t("Copier le lien")}
             </button>
           </div>
           {pos && pos.d > 0 && (
@@ -245,13 +246,13 @@ export function MovieDetail({ movie, onClose }: { movie: Movie; onClose: () => v
               <div className="bar">
                 <i style={{ width: `${(pos.t / pos.d) * 100}%` }} />
               </div>
-              <span className="muted small">Arrêté à {Math.floor(pos.t / 60)} min sur {Math.round(pos.d / 60)}</span>
+              <span className="muted small">{t('Arrêté à {t} min sur {d}', { t: Math.floor(pos.t / 60), d: Math.round(pos.d / 60) })}</span>
             </div>
           )}
           {info?.plot && <p className="detail-plot">{info.plot}</p>}
           {info?.director && (
             <p className="small">
-              <span className="muted">Réalisation : </span>
+              <span className="muted">{t("Réalisation :")} </span>
               {info.director}
             </p>
           )}
@@ -261,7 +262,7 @@ export function MovieDetail({ movie, onClose }: { movie: Movie; onClose: () => v
               {info.cast}
             </p>
           )}
-          {err && <p className="muted small">Détails indisponibles ({err}).</p>}
+          {err && <p className="muted small">{t('Détails indisponibles ({err}).', { err })}</p>}
         </div>
       </div>
     </Modal>
@@ -373,11 +374,11 @@ export function ShowDetail({ show, onClose }: { show: Show; onClose: () => void 
             {episodes && episodes.length > 0 && (
               <button className="btn" onClick={() => playEp(resumeEp ?? episodes[0])}>
                 <Icon name="play" size={16} filled />
-                {resumeEp ? `Reprendre S${resumeEp.season} É${resumeEp.episode}` : 'Premier épisode'}
+                {resumeEp ? t('Reprendre S{s} É{e}', { s: resumeEp.season, e: resumeEp.episode }) : t("Premier épisode")}
               </button>
             )}
             <button className={cx('btn ghost', favs.has(show.id) && 'active')} onClick={() => toggleFav(show.id)}>
-              <Icon name="star" size={16} filled={favs.has(show.id)} /> {favs.has(show.id) ? 'Favori' : 'Favoris'}
+              <Icon name="star" size={16} filled={favs.has(show.id)} /> {favs.has(show.id) ? t("Favori") : t("Favoris")}
             </button>
           </div>
           {plot && <p className="detail-plot">{plot}</p>}
@@ -391,16 +392,16 @@ export function ShowDetail({ show, onClose }: { show: Show; onClose: () => void 
       </div>
 
       <div className="episodes">
-        {err && <div className="pane-empty">Impossible de charger les épisodes : {err}</div>}
+        {err && <div className="pane-empty">{t('Impossible de charger les épisodes : {err}', { err })}</div>}
         {!episodes && !err && (
           <div className="pane-empty">
-            <span className="spinner" /> Chargement des épisodes…
+            <span className="spinner" /> {t("Chargement des épisodes…")}
           </div>
         )}
-        {episodes && episodes.length === 0 && <div className="pane-empty">Aucun épisode disponible.</div>}
+        {episodes && episodes.length === 0 && <div className="pane-empty">{t("Aucun épisode disponible.")}</div>}
         {list.length > 0 && (
           <div className="season-bar">
-            {seasons.length > 1 ? null : <span className="muted small">{list.length} épisodes</span>}
+            {seasons.length > 1 ? null : <span className="muted small">{t(plural(list.length, '{n} épisode', '{n} épisodes'), { n: list.length })}</span>}
             <DownloadSeason episodes={list} season={current} onDownload={downloadEp} />
           </div>
         )}
@@ -408,7 +409,7 @@ export function ShowDetail({ show, onClose }: { show: Show; onClose: () => void 
           <div className="seasons">
             {seasons.map((s) => (
               <button key={s} className={cx('chip', s === current && 'on')} onClick={() => setSeason(s)}>
-                Saison {s}
+                {t('Saison {n}', { n: s })}
               </button>
             ))}
           </div>
@@ -455,10 +456,10 @@ function DownloadSeason({ episodes, season, onDownload }: { episodes: Episode[];
   const { downloads } = useApp();
   if (!downloadsAvailable) return null;
   const todo = episodes.filter((e) => !downloads.items[e.id] || downloads.items[e.id].status === 'error');
-  if (!todo.length) return <span className="muted small">Saison {season} entièrement téléchargée ou en file d’attente</span>;
+  if (!todo.length) return <span className="muted small">{t('Saison {n} entièrement téléchargée ou en file d’attente', { n: season })}</span>;
   return (
     <button className="btn ghost" onClick={() => todo.forEach(onDownload)}>
-      <Icon name="download" size={16} /> Télécharger la saison {season} ({todo.length})
+      <Icon name="download" size={16} /> {t('Télécharger la saison {n} ({count})', { n: season, count: todo.length })}
     </button>
   );
 }
