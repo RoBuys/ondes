@@ -4,26 +4,25 @@ Desktop app (Tauri 2 + React) to watch your stream sources. The interface is ava
 (follows the system language; *Settings → Language* to switch). Menu names are given below in English.
 
 - **Sources**: M3U link, imported M3U file, **Xtream Codes** account (several sources supported).
-- **Live** (*Direct*): channels by group, search, favorites, keyboard zapping (↑ ↓), current and upcoming programme.
+- **Live**: channels by group, search, favorites, keyboard zapping (↑ ↓), current and upcoming programme.
 - **Guide**: 12-hour XMLTV grid (3-hour steps), detected from the playlist (`x-tvg-url`) or Xtream, or entered
   manually. `.xml.gz` files are supported.
-- **Movies & series** (*Films*, *Séries*): Xtream catalogs (detail pages, seasons, episodes) or M3U VOD, resume
+- **Movies & series**: Xtream catalogs (detail pages, seasons, episodes) or M3U VOD, resume
   playback, automatic next episode.
 - **Playback (macOS)**: bundled **mpv** engine — deinterlaced broadcast TV (1080i), AC-3, HEVC, audio and subtitle
-  tracks (DVB included), full screen. *Réglages → Moteur de lecture* (Settings → Playback engine) switches back to
+  tracks (DVB included), full screen. *Settings → Playback engine* switches back to
   the web player.
 - **Playback (Windows, and fallback)**: HLS (hls.js), MPEG-TS (mpegts.js) and native MP4, switching automatically from
   one format to another on failure.
 - **Smart reconnection**: when a stream drops or freezes, it is reloaded automatically (up to 8 attempts, increasing
   delay, immediate retry when the network comes back); movies resume at the same position.
 - **Global search**: the top bar searches channels, movies and series across all sources at once.
-- **Favorites and lists** (*Favoris*, *Listes*): star channels, movies and series (*Favoris* tab); personal channel
-  lists (right-click, or the *Listes* button under the player), managed in *Organiser → Mes listes*
-  (Organize → My lists).
-- **Per source** (*Réglages → Modifier*, Settings → Edit): tabs shown for the source, or hide the source.
-- **Organize** (*Organiser*): hide, rename and reorder (drag and drop) groups, with a filter to show or hide many at
+- **Favorites and lists**: star channels, movies and series (*Favorites* tab); personal channel lists (right-click,
+  or the *Lists* button under the player), managed in *Organize → My lists*.
+- **Per source** (*Settings → Edit*): tabs shown for the source, or hide the source.
+- **Organize**: hide, rename and reorder (drag and drop) groups, with a filter to show or hide many at
   once; two groups renamed alike are merged. Right-click a channel, movie or series to rename or hide it.
-- **Downloads** (*Téléchargés*): movies, episodes or whole seasons, saved to `Movies/Ondes` (macOS) or
+- **Downloads**: movies, episodes or whole seasons, saved to `Movies/Ondes` (macOS) or
   `Videos\Ondes` (Windows), one at a time to stay within the subscription's connection limit, with pause, resume
   (even after a restart) and offline playback.
 
@@ -85,6 +84,6 @@ scripts/        bundle-libmpv-macos.sh
 ## Known limitations
 
 - Windows still uses the web player: codecs depend on WebView2 (H.264/AAC everywhere, HEVC only with the Windows
-  hardware extension, some AC-3/MKV or interlaced streams may not play). The *Copier l'adresse* (Copy address)
+  hardware extension, some AC-3/MKV or interlaced streams may not play). The *Copy address*
   button lets you open them in VLC.
 - No catch-up (replay) or recording yet.
