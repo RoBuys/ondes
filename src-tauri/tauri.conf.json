@@ -40,8 +40,8 @@
     "active": true,
     "targets": "all",
     "category": "Video",
-    "shortDescription": "Lecteur de streams",
-    "longDescription": "Ondes lit vos playlists de streams (M3U, Xtream Codes) avec guide des programmes, films et séries.",
+    "shortDescription": "Stream player",
+    "longDescription": "Ondes plays your stream playlists (M3U, Xtream Codes) with a programme guide, movies and series.",
     "icon": [
       "icons/32x32.png",
       "icons/128x128.png",

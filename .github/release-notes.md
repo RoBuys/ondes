@@ -1,30 +1,30 @@
-**Ondes**, lecteur de streams pour macOS (Apple Silicon) et Windows.
+**Ondes**, stream player for macOS (Apple Silicon) and Windows.
 
-## Fonctions
+## Features
 
-- Sources **M3U** (lien ou fichier) et **Xtream Codes**, plusieurs sources possibles
-- **Direct** : groupes, recherche, favoris, zapping au clavier (↑ ↓), programme en cours et à suivre
-- **Guide des programmes** XMLTV (détecté automatiquement ou saisi à la main, `.xml.gz` accepté)
-- **Films et séries** : fiches détaillées, saisons, reprise de lecture, épisode suivant automatique
-- **Reconnexion intelligente** en cas de coupure ou d'image figée
-- **Favoris** pour les chaînes, films et séries (étoile sur les affiches), réunis dans un onglet « Favoris »
-- **Listes de chaînes** personnelles (« Sport », « Infos »…), dans le Direct et le Guide
-- **Recherche globale** dans toutes les sources
-- **Organiser** : masquer, renommer, réordonner et fusionner les groupes, filtre pour en afficher ou masquer plusieurs d'un coup ; clic droit pour renommer ou masquer un élément
-- **Par source** : choisir les onglets affichés (Direct, Guide, Films, Séries) ou masquer la source
-- **Téléchargements** de films, épisodes et saisons pour regarder hors connexion
-- **macOS : moteur de lecture mpv** — lit la TNT entrelacée (1080i), l'AC-3, le HEVC ; choix de la piste audio et des sous-titres (DVB compris), désentrelacement automatique. Windows utilise pour l'instant le lecteur web.
+- **M3U** (link or file) and **Xtream Codes** sources, several sources supported
+- **Live**: groups, search, favorites, keyboard zapping (↑ ↓), current and upcoming programme
+- XMLTV **programme guide** (detected automatically or entered manually, `.xml.gz` supported)
+- **Movies and series**: detail pages, seasons, resume playback, automatic next episode
+- **Smart reconnection** when a stream drops or freezes
+- **Favorites** for channels, movies and series (star on posters), gathered in a Favorites tab
+- Personal **channel lists** ("Sport", "News"…), in Live and Guide
+- **Global search** across all sources
+- **Organize**: hide, rename, reorder and merge groups, with a filter to show or hide many at once; right-click to rename or hide an item
+- **Per source**: choose the tabs shown (Live, Guide, Movies, Series) or hide the source
+- **Downloads** of movies, episodes and seasons to watch offline
+- **macOS: mpv playback engine** — plays interlaced broadcast TV (1080i), AC-3, HEVC; audio and subtitle track selection (DVB included), automatic deinterlacing. Windows still uses the web player for now.
 
-Ondes ne fournit aucune chaîne : utilisez uniquement des sources auxquelles vous avez légalement accès.
+Ondes does not provide any channel: only use sources you are legally entitled to access.
 
 ## Installation
 
-**Windows** : l'installateur `…_x64-setup.exe` (ou le `.msi`). L'installateur n'est pas signé : à l'avertissement SmartScreen,
-choisissez « Informations complémentaires » puis « Exécuter quand même ».
+**Windows**: the `…_x64-setup.exe` installer (or the `.msi`). The installer is not signed: at the SmartScreen warning,
+choose "More info", then "Run anyway".
 
-**macOS 11 ou plus récent, Mac Apple Silicon (M1 et suivants)** : ouvrez le `.dmg` et glissez Ondes dans Applications.
-L'app n'est pas notarisée par Apple : au premier lancement, faites clic droit → Ouvrir. Si macOS indique que l'app
-« est endommagée », exécutez dans le Terminal :
+**macOS 11 or later, Apple Silicon Macs (M1 and later)**: open the `.dmg` and drag Ondes to Applications.
+The app is not notarized by Apple: on first launch, right-click → Open. If macOS says the app
+"is damaged", run in Terminal:
 
 ```
 xattr -cr /Applications/Ondes.app

@@ -1,74 +1,84 @@
-# Ondes — lecteur de streams pour macOS (Apple Silicon) et Windows
+# Ondes — stream player for macOS (Apple Silicon) and Windows
 
-Application de bureau (Tauri 2 + React) pour regarder vos sources de streams :
+Desktop app (Tauri 2 + React) to watch your stream sources. The interface is in French; menu names are
+given below in French (*italics*) with their English meaning.
 
-- **Sources** : lien M3U, fichier M3U importé, compte **Xtream Codes** (plusieurs sources possibles).
-- **Direct** : chaînes par groupe, recherche, favoris, zapping au clavier (↑ ↓), programme en cours et à suivre.
-- **Guide** : grille XMLTV sur 12 h (navigation par tranches de 3 h), détectée depuis la playlist (`x-tvg-url`) ou Xtream, ou saisie à la main. Les `.xml.gz` sont gérés.
-- **Films & séries** : catalogues Xtream (fiches détaillées, saisons, épisodes) ou VOD des M3U, reprise de lecture, épisode suivant automatique.
-- **Lecture (macOS)** : moteur **mpv** embarqué — TNT entrelacée désentrelacée, AC-3, HEVC, pistes audio et sous-titres
-  (DVB compris), plein écran. Réglages → Moteur de lecture permet de revenir au lecteur web.
-- **Lecture (Windows, et repli)** : HLS (hls.js), MPEG-TS (mpegts.js) et MP4 natif, avec bascule automatique d'un format
-  à l'autre en cas d'échec.
-- **Reconnexion intelligente** : en cas de coupure ou d'image figée, le flux est relancé automatiquement (jusqu'à 8 essais,
-  délai croissant, reprise immédiate au retour du réseau) ; les films reprennent à la même position.
-- **Recherche globale** : la barre du haut cherche chaînes, films et séries dans toutes les sources à la fois.
-- **Favoris et listes** : étoile sur les chaînes, films et séries (onglet « Favoris ») ; listes de chaînes personnelles
-  (clic droit ou bouton « Listes » sous le lecteur), gérées dans Organiser → Mes listes.
-- **Par source** (Réglages → Modifier) : onglets affichés et masquage de la source.
-- **Organiser** : masquer, renommer, réordonner (glisser-déposer) les groupes ; deux groupes renommés pareil fusionnent.
-  Clic droit sur une chaîne, un film ou une série pour la renommer ou la masquer.
-- **Téléchargements** (app Windows) : films, épisodes ou saison entière dans `Vidéos\Ondes`, un à la fois pour respecter
-  la limite de connexions de l'abonnement, avec pause, reprise (même après redémarrage) et lecture hors connexion.
+- **Sources**: M3U link, imported M3U file, **Xtream Codes** account (several sources supported).
+- **Live** (*Direct*): channels by group, search, favorites, keyboard zapping (↑ ↓), current and upcoming programme.
+- **Guide**: 12-hour XMLTV grid (3-hour steps), detected from the playlist (`x-tvg-url`) or Xtream, or entered
+  manually. `.xml.gz` files are supported.
+- **Movies & series** (*Films*, *Séries*): Xtream catalogs (detail pages, seasons, episodes) or M3U VOD, resume
+  playback, automatic next episode.
+- **Playback (macOS)**: bundled **mpv** engine — deinterlaced broadcast TV (1080i), AC-3, HEVC, audio and subtitle
+  tracks (DVB included), full screen. *Réglages → Moteur de lecture* (Settings → Playback engine) switches back to
+  the web player.
+- **Playback (Windows, and fallback)**: HLS (hls.js), MPEG-TS (mpegts.js) and native MP4, switching automatically from
+  one format to another on failure.
+- **Smart reconnection**: when a stream drops or freezes, it is reloaded automatically (up to 8 attempts, increasing
+  delay, immediate retry when the network comes back); movies resume at the same position.
+- **Global search**: the top bar searches channels, movies and series across all sources at once.
+- **Favorites and lists** (*Favoris*, *Listes*): star channels, movies and series (*Favoris* tab); personal channel
+  lists (right-click, or the *Listes* button under the player), managed in *Organiser → Mes listes*
+  (Organize → My lists).
+- **Per source** (*Réglages → Modifier*, Settings → Edit): tabs shown for the source, or hide the source.
+- **Organize** (*Organiser*): hide, rename and reorder (drag and drop) groups, with a filter to show or hide many at
+  once; two groups renamed alike are merged. Right-click a channel, movie or series to rename or hide it.
+- **Downloads** (*Téléchargés*): movies, episodes or whole seasons, saved to `Movies/Ondes` (macOS) or
+  `Videos\Ondes` (Windows), one at a time to stay within the subscription's connection limit, with pause, resume
+  (even after a restart) and offline playback.
 
-Ondes ne fournit aucune chaîne : utilisez uniquement des sources auxquelles vous avez légalement accès.
+Ondes does not provide any channel: only use sources you are legally entitled to access.
 
-## Installer
+## Install
 
-Les installateurs sont publiés dans les **Releases** du dépôt GitHub (Windows `.exe`/`.msi`, macOS `.dmg` universel).
-Voir `.github/release-notes.md` pour les avertissements Windows SmartScreen et macOS Gatekeeper (app non signée).
+Installers are published in the repository's **Releases** (Windows `.exe`/`.msi`, macOS `.dmg` for Apple Silicon).
+See `.github/release-notes.md` for the Windows SmartScreen and macOS Gatekeeper warnings (the app is not signed).
 
-## Compiler et publier
+## Build and release
 
-GitHub Actions (`.github/workflows/build.yml`) compile Windows et macOS à chaque push sur `main`.
-Pour publier une version : mettre à jour la version dans `package.json`, `src-tauri/tauri.conf.json` et
-`src-tauri/Cargo.toml`, puis pousser un tag `vX.Y.Z` : la release est créée automatiquement avec les installateurs.
+GitHub Actions (`.github/workflows/build.yml`) builds Windows and macOS on every push to `main`.
+To release a version: update the version in `package.json`, `src-tauri/tauri.conf.json` and
+`src-tauri/Cargo.toml`, then push a `vX.Y.Z` tag: the release is created automatically with the installers.
 
-## Développer sur le Mac
+## Develop on the Mac
 
 ```bash
 npm install
 npm run dev      # http://localhost:1420
 ```
 
-Dans un navigateur classique, les serveurs de streams bloquent les requêtes (CORS) : le serveur de dev Vite fournit un
-proxy `/__proxy` utilisé automatiquement. Dans l'app Windows, WebView2 est lancé avec `--disable-web-security`
-(voir `src-tauri/tauri.conf.json`), donc aucun proxy n'est nécessaire.
+In a regular browser, stream servers block requests (CORS): the Vite dev server provides a `/__proxy` endpoint that
+is used automatically. In the Windows app, WebView2 runs with `--disable-web-security`
+(see `src-tauri/tauri.windows.conf.json`), so no proxy is needed.
 
-Pour lancer l'app Tauri sur le Mac : installez Rust puis `npm run tauri dev`. Sous macOS, WKWebView applique le CORS :
-la partie Rust démarre un relais local (`src-tauri/src/proxy.rs`, 127.0.0.1 + jeton) par lequel passent flux et images.
-Sous Windows, WebView2 est lancé sans CORS et n'en a pas besoin.
+To run the Tauri app on the Mac: install Rust, then `npm run tauri dev`. On macOS, WKWebView enforces CORS: the Rust
+side starts a local relay (`src-tauri/src/proxy.rs`, 127.0.0.1 + token) that streams and images go through.
+On Windows, WebView2 runs without CORS and does not need it.
 
-## Moteur mpv (macOS)
+## mpv engine (macOS)
 
-- `src-tauri/src/mpv.rs` charge libmpv à l'exécution ; `src-tauri/src/mac_render.rs` dessine l'image dans une vue OpenGL
-  placée sous la vue web (API de rendu de mpv). L'interface place l'image sous le lecteur avec `video-margin-ratio-*`.
-- `scripts/bundle-libmpv-macos.sh` copie libmpv de Homebrew et ses dépendances dans `src-tauri/lib/macos`
-  (non versionné), embarquées dans `Ondes.app/Contents/Resources/lib`. Prérequis : `brew install mpv dylibbundler`.
-- `src-tauri/Entitlements.plist` autorise le chargement de ces bibliothèques et le JIT de LuaJIT (runtime renforcé).
-- Diagnostic : journal `~/Library/Logs/com.robertbuys.ondes/ondes.log` ; autotest des versions de développement via
-  la variable `ONDES_SELFTEST` (liste JSON de flux à lire).
+- `src-tauri/src/mpv.rs` loads libmpv at runtime; `src-tauri/src/mac_render.rs` draws the picture into an OpenGL view
+  placed below the web view (mpv render API), on a dedicated render thread so the main thread stays free. The UI
+  positions the picture under the player with `video-margin-ratio-*`.
+- `scripts/bundle-libmpv-macos.sh` copies Homebrew's libmpv and its dependencies into `src-tauri/lib/macos`
+  (not versioned), bundled into `Ondes.app/Contents/Resources/lib`. Requirements: `brew install mpv dylibbundler`.
+- `src-tauri/Entitlements.plist` allows loading these libraries and LuaJIT's JIT (hardened runtime).
+- Diagnostics: log at `~/Library/Logs/com.robertbuys.ondes/ondes.log`; development builds have a self-test driven by
+  the `ONDES_SELFTEST` variable (JSON list of streams to play).
 
-## Structure
+## Layout
 
 ```
-src/lib/        m3u.ts, xtream.ts, xmltv.ts (parseurs), catalog.ts, store.ts (localStorage + IndexedDB), net.ts
-src/components/ Live, Guide, Vod (films/séries), Player, Settings, ui
-src-tauri/      coquille Rust Tauri 2, configuration Windows, icônes
+src/lib/        m3u.ts, xtream.ts, xmltv.ts (parsers), catalog.ts, store.ts (localStorage + IndexedDB), net.ts,
+                mpv.ts, lists.ts, content.ts (per-source customization), downloads.ts, diag.ts
+src/components/ Live, Guide, Vod (movies/series), Favorites, Player (web), MpvPlayer, Organize, Settings, ui
+src-tauri/      Tauri 2 Rust shell: downloads, relay (proxy.rs), mpv (mpv.rs, mac_render.rs), icons
+scripts/        bundle-libmpv-macos.sh
 ```
 
-## Limites connues
+## Known limitations
 
-- Les codecs dépendent de WebView2 : H.264/AAC partout ; HEVC seulement avec l'extension matérielle Windows ;
-  certains flux AC-3/MKV peuvent ne pas se lire. Le bouton « Copier l'adresse » permet de les ouvrir dans VLC.
-- Pas de replay (catch-up) ni d'enregistrement pour l'instant.
+- Windows still uses the web player: codecs depend on WebView2 (H.264/AAC everywhere, HEVC only with the Windows
+  hardware extension, some AC-3/MKV or interlaced streams may not play). The *Copier l'adresse* (Copy address)
+  button lets you open them in VLC.
+- No catch-up (replay) or recording yet.

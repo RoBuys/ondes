@@ -5,7 +5,7 @@ set -euo pipefail
 cd "$(dirname "$0")/.."
 OUT=src-tauri/lib/macos
 SRC="$(brew --prefix)/lib/libmpv.2.dylib"
-[ -f "$SRC" ] || { echo "libmpv introuvable : brew install mpv" >&2; exit 1; }
+[ -f "$SRC" ] || { echo "libmpv not found: brew install mpv" >&2; exit 1; }
 rm -rf "$OUT" && mkdir -p "$OUT"
 cp "$SRC" "$OUT/" && chmod u+w "$OUT/libmpv.2.dylib"
 # Copies non-system dependencies and rewrites their links to @loader_path (the library's own folder).
@@ -22,7 +22,7 @@ done
 # Ad hoc signature (the app disables library validation, see Entitlements.plist).
 for f in "$OUT"/*.dylib; do codesign --force --sign - "$f" >/dev/null 2>&1; done
 dups=$(for f in "$OUT"/*.dylib; do otool -l "$f" | awk '/cmd LC_RPATH/{getline; getline; print $2}' | sort | uniq -d; done)
-[ -z "$dups" ] || { echo "LC_RPATH en double : $dups" >&2; exit 1; }
+[ -z "$dups" ] || { echo "Duplicate LC_RPATH: $dups" >&2; exit 1; }
 left=$(for f in "$OUT"/*.dylib; do otool -L "$f" | tail -n +2 | grep -E "$(brew --prefix)|/usr/local" || true; done)
-[ -z "$left" ] || { echo "Liens Homebrew restants :" >&2; echo "$left" >&2; exit 1; }
-echo "libmpv prête : $(ls "$OUT" | wc -l | tr -d ' ') bibliothèques, $(du -sh "$OUT" | cut -f1)"
+[ -z "$left" ] || { echo "Leftover Homebrew links:" >&2; echo "$left" >&2; exit 1; }
+echo "libmpv ready: $(ls "$OUT" | wc -l | tr -d ' ') libraries, $(du -sh "$OUT" | cut -f1)"
