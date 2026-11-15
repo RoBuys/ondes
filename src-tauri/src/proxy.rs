@@ -43,7 +43,7 @@ pub fn start(log: Option<std::path::PathBuf>) -> Result<ProxyInfo, String> {
     let port = std_listener.local_addr().map_err(|e| e.to_string())?.port();
     let token = random_token()?;
     let client = reqwest::Client::builder()
-        .user_agent("Mozilla/5.0 Ondes/0.4.0")
+        .user_agent("Mozilla/5.0 Ondes/1.0.0")
         .connect_timeout(std::time::Duration::from_secs(20))
         .build()
         .map_err(|e| e.to_string())?;
@@ -98,7 +98,7 @@ fn error_chain(e: &dyn std::error::Error) -> String {
 }
 
 /// Masks Xtream credentials (/live/u/p/…) and username/password parameters in a URL.
-fn redact(u: &str) -> String {
+pub(crate) fn redact(u: &str) -> String {
     let Ok(mut url) = reqwest::Url::parse(u) else {
         return "(url)".into();
     };

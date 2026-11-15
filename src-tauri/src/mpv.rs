@@ -381,7 +381,7 @@ fn start<R: Runtime>(
         ("demuxer-max-bytes", "150MiB"),
         ("demuxer-readahead-secs", "20"),
         ("network-timeout", "20"),
-        ("user-agent", "Mozilla/5.0 Ondes/0.3"),
+        ("user-agent", concat!("Mozilla/5.0 Ondes/", env!("CARGO_PKG_VERSION"))),
         (
             "stream-lavf-o",
             "reconnect=1,reconnect_streamed=1,reconnect_delay_max=5",
@@ -608,35 +608,61 @@ pub async fn mpv_get(state: State<'_, MpvState>, name: String) -> Result<Option<
     Ok(current(&state)?.get(&name))
 }
 
-/// Positions the picture in the window: margins as a fraction of the window size (0 to 1).
-/// Called whenever the player's area moves or the window is resized, so on macOS it also refreshes the
-/// OpenGL drawable size (on the main thread).
+/// Positions the picture under the player element.
+///
+/// `left`, `top`, `width`, `height` are the element's rectangle in CSS pixels and `vw`, `vh` the page's
+/// viewport size. mpv's margins are fractions of the surface it draws on, which is not always the viewport:
+/// on macOS the OpenGL view covers the whole web view, title bar area included (e.g. 820 points tall for a
+/// 788-pixel viewport), so the viewport's offset inside the view is added before computing the margins.
+/// On macOS this also refreshes the OpenGL drawable size (on the main thread).
 #[tauri::command]
+#[allow(clippy::too_many_arguments)]
 pub async fn mpv_margins<R: Runtime>(
     app: AppHandle<R>,
     state: State<'_, MpvState>,
     left: f64,
-    right: f64,
     top: f64,
-    bottom: f64,
+    width: f64,
+    height: f64,
+    vw: f64,
+    vh: f64,
 ) -> Result<(), String> {
     let mpv = current(&state)?;
-    let clamp = |v: f64| v.clamp(0.0, 0.99);
-    mpv.set("video-margin-ratio-left", &format!("{:.5}", clamp(left)))?;
-    mpv.set("video-margin-ratio-right", &format!("{:.5}", clamp(right)))?;
-    mpv.set("video-margin-ratio-top", &format!("{:.5}", clamp(top)))?;
-    mpv.set(
-        "video-margin-ratio-bottom",
-        &format!("{:.5}", clamp(bottom)),
-    )?;
+    // Surface size in points: the OpenGL view on macOS, the viewport elsewhere.
+    #[allow(unused_mut)]
+    let (mut sw, mut sh) = (vw, vh);
     #[cfg(target_os = "macos")]
     if let Some(r) = *state.renderer.lock().unwrap() {
+        let (tx, rx) = std::sync::mpsc::channel();
         let _ = app.run_on_main_thread(move || unsafe {
-            (*(r as *const crate::mac_render::GlRenderer)).resize()
+            let g = &*(r as *const crate::mac_render::GlRenderer);
+            g.resize();
+            let _ = tx.send(g.view_size());
         });
+        if let Ok((w, h)) = rx.recv() {
+            if w > 0.0 && h > 0.0 {
+                (sw, sh) = (w, h);
+            }
+        }
     }
     #[cfg(not(target_os = "macos"))]
     let _ = app;
+    // The viewport sits at the bottom of the surface: any extra height is the title bar inset at the top.
+    let dx = (sw - vw).max(0.0);
+    let dy = (sh - vh).max(0.0);
+    let ratio = |v: f64, total: f64| (v / total).clamp(0.0, 0.99);
+    let x0 = left + dx;
+    let y0 = top + dy;
+    mpv.set("video-margin-ratio-left", &format!("{:.6}", ratio(x0, sw)))?;
+    mpv.set(
+        "video-margin-ratio-right",
+        &format!("{:.6}", ratio(sw - (x0 + width), sw)),
+    )?;
+    mpv.set("video-margin-ratio-top", &format!("{:.6}", ratio(y0, sh)))?;
+    mpv.set(
+        "video-margin-ratio-bottom",
+        &format!("{:.6}", ratio(sh - (y0 + height), sh)),
+    )?;
     Ok(())
 }
 
@@ -710,11 +736,19 @@ fn debug_views_main<R: Runtime>(window: &WebviewWindow<R>) -> Result<Vec<String>
                 }
                 lay.push(']');
             }
+            let frame: objc2_foundation::NSRect = msg_send![&*v, frame];
+            let backing: objc2_foundation::NSRect = msg_send![&*v, convertRectToBacking: frame];
             out.push(format!(
-                "{}{}{}",
+                "{}{}{} frame=({:.1},{:.1} {:.1}x{:.1}) backing={:.0}x{:.0}",
                 "  ".repeat(depth),
                 (*cls).name().to_string_lossy(),
-                lay
+                lay,
+                frame.origin.x,
+                frame.origin.y,
+                frame.size.width,
+                frame.size.height,
+                backing.size.width,
+                backing.size.height
             ));
             let subs: Option<Retained<objc2_foundation::NSArray<AnyObject>>> =
                 msg_send![&*v, subviews];

@@ -212,6 +212,12 @@ impl GlRenderer {
 
     /// Main thread: reads the view's size in pixels and updates the GL drawable (after a resize or a
     /// change of screen). The CGL lock keeps the render thread from drawing meanwhile.
+    /// Main thread: the view's size in points.
+    pub unsafe fn view_size(&self) -> (f64, f64) {
+        let bounds: NSRect = msg_send![self.view, bounds];
+        (bounds.size.width, bounds.size.height)
+    }
+
     pub unsafe fn resize(&self) {
         let Some(gl) = gl() else { return };
         let bounds: NSRect = msg_send![self.view, bounds];

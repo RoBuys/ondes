@@ -21,6 +21,8 @@ export interface Download {
   received: number;
   total?: number;
   error?: string;
+  /** Reconnection attempt in progress after a network error (the download resumes on its own). */
+  retry?: number;
   addedAt: number;
 }
 
@@ -33,6 +35,7 @@ interface ProgressEvent {
   total?: number | null;
   path: string;
   error?: string | null;
+  retry?: number | null;
 }
 
 function extOf(url: string) {
@@ -55,8 +58,8 @@ export function fmtBytes(n?: number) {
 export function useDownloads() {
   const [items, setItems] = useState<Record<string, Download>>(() => {
     const saved = prefs.get<Record<string, Download>>('downloads', {});
-    // On restart, an interrupted download is paused (it will resume where it stopped).
-    for (const d of Object.values(saved)) if (d.status === 'downloading') d.status = 'paused';
+    // Downloads interrupted by quitting the app resume on their own (from the partial file).
+    for (const d of Object.values(saved)) if (d.status === 'downloading') d.status = 'queued';
     return saved;
   });
   const [dir, setDir] = useState<string | null>(null);
@@ -83,7 +86,7 @@ export function useDownloads() {
         if (!d) return prev;
         return {
           ...prev,
-          [p.id]: { ...d, status: p.status, received: p.received, total: p.total ?? d.total, path: p.path, error: p.error ?? undefined },
+          [p.id]: { ...d, status: p.status, received: p.received, total: p.total ?? d.total, path: p.path, error: p.error ?? undefined, retry: p.retry ?? undefined },
         };
       });
     }).then((fn) => (cancelled ? fn() : (off = fn)));

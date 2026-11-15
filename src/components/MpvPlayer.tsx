@@ -77,9 +77,13 @@ export function MpvPlayer({ spec, mode, onClose }: { spec: PlaySpec; mode: 'inli
     const W = window.innerWidth;
     const H = window.innerHeight;
     if (!W || !H) return;
-    mpv
-      .margins({ left: r.left / W, right: (W - r.right) / W, top: r.top / H, bottom: (H - r.bottom) / H })
-      .catch(() => {});
+    // Round inward to whole pixels, plus one pixel on sides that do not touch the window edge: mpv rounds
+    // its own placement too, and the picture must never spill under the surrounding interface.
+    const x0 = Math.ceil(r.left) + (r.left > 0 ? 1 : 0);
+    const y0 = Math.ceil(r.top) + (r.top > 0 ? 1 : 0);
+    const x1 = Math.floor(r.right) - (r.right < W ? 1 : 0);
+    const y1 = Math.floor(r.bottom) - (r.bottom < H ? 1 : 0);
+    mpv.margins({ left: x0, top: y0, width: x1 - x0, height: y1 - y0, vw: W, vh: H }).catch(() => {});
   }, []);
 
   useLayoutEffect(() => {

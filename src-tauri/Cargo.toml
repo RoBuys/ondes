@@ -1,6 +1,6 @@
 [package]
 name = "ondes"
-version = "0.4.0"
+version = "1.0.0"
 description = "Ondes — stream player for macOS and Windows"
 edition = "2021"
 

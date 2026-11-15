@@ -69,7 +69,9 @@ export function DownloadsView() {
                     </div>
                   )}
                   <div className={cx('small', d.status === 'error' ? 'dl-error' : 'muted')}>
-                    {STATUS[d.status]}
+                    {d.status === 'downloading' && d.retry
+                      ? t('Reconnexion ({n}/{max})…', { n: d.retry, max: 8 })
+                      : STATUS[d.status]}
                     {d.status === 'done' && ` · ${fmtBytes(d.received || d.total)}`}
                     {(d.status === 'downloading' || d.status === 'paused') &&
                       ` · ${d.total ? t('{done} sur {total} ({pct} %)', { done: fmtBytes(d.received), total: fmtBytes(d.total), pct: Math.floor(pct) }) : fmtBytes(d.received)}`}

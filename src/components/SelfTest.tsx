@@ -12,6 +12,10 @@ export interface SelfTestItem {
   seconds?: number;
   tsOverride?: PlaySpec['tsOverride'];
   forceEngine?: PlaySpec['forceEngine'];
+  /** Place the player in this rectangle (CSS px), like the Live view's inline player */
+  rect?: { left: number; top: number; width: number; height: number };
+  /** Download `url` with the native downloader instead of playing it */
+  download?: boolean;
   /** Play with native mpv; optional screenshot path */
   mpv?: boolean;
   shot?: string;
@@ -49,6 +53,28 @@ export function SelfTest({ items }: { items: SelfTestItem[] }) {
     };
   }, []);
 
+  /* Download self-test: starts a real download and logs its progress events until it ends. */
+  useEffect(() => {
+    const it = items[i];
+    if (!it?.download) return;
+    let unlisten: (() => void) | undefined;
+    let last = 0;
+    (async () => {
+      const { listen } = await import('@tauri-apps/api/event');
+      unlisten = await listen<{ id: string; status: string; received: number; total?: number; retry?: number; error?: string }>(
+        'download-progress',
+        ({ payload: p }) => {
+          const now = Date.now();
+          if (p.status === 'downloading' && !p.retry && now - last < 2000) return;
+          last = now;
+          diag('autotest téléchargement', p.status, `${Math.round(p.received / 1e6)} Mo`, p.total ? `/ ${Math.round(p.total / 1e6)} Mo` : '', p.retry ? `essai ${p.retry}` : '', p.error ?? '');
+        },
+      );
+      await invoke('download_start', { id: `selftest-${i}`, url: it.url, fileName: 'ondes-selftest.ts' }).catch((e) => diag('autotest téléchargement erreur', String(e)));
+    })();
+    return () => unlisten?.();
+  }, [i, items]);
+
   /* mpv self-test: native engine, margins, properties and window view order */
   useEffect(() => {
     const it = items[i];
@@ -62,7 +88,7 @@ export function SelfTest({ items }: { items: SelfTestItem[] }) {
       unl.push(await mpv.onEvent((e) => diag('mpv événement', e)));
       unl.push(await mpv.onLog((l) => diag('mpv log', l)));
       document.documentElement.classList.add('mpv-on');
-      await mpv.margins({ left: 0.1, right: 0.1, top: 0.1, bottom: 0.1 });
+      await mpv.margins({ left: innerWidth * 0.1, top: innerHeight * 0.1, width: innerWidth * 0.8, height: innerHeight * 0.8, vw: innerWidth, vh: innerHeight });
       if ((it.seconds ?? 12) > 15) await mpv.set('loop-file', 'inf');
       await mpv.command('loadfile', it.url).catch((e) => diag('mpv loadfile', String(e)));
       window.setTimeout(async () => {
@@ -93,6 +119,19 @@ export function SelfTest({ items }: { items: SelfTestItem[] }) {
     const t = window.setTimeout(async () => {
       const v = box.current?.querySelector('video');
       const stats = await invoke('mpv_stats').catch(() => null);
+      if (it.rect) {
+        const hole = box.current?.querySelector('.mpv-hole')?.getBoundingClientRect();
+        const names = ['osd-dimensions/w', 'osd-dimensions/h', 'osd-dimensions/ml', 'osd-dimensions/mr', 'osd-dimensions/mt', 'osd-dimensions/mb', 'video-margin-ratio-left', 'video-margin-ratio-top', 'video-margin-ratio-right', 'video-margin-ratio-bottom', 'video-params/aspect'];
+        const props: Record<string, string | null> = {};
+        for (const n of names) props[n] = await invoke<string | null>('mpv_get', { name: n }).catch(() => null);
+        diag('autotest placement', it.title, {
+          hole: hole && { left: hole.left, top: hole.top, right: hole.right, bottom: hole.bottom, w: hole.width, h: hole.height },
+          inner: { w: window.innerWidth, h: window.innerHeight },
+          dpr: window.devicePixelRatio,
+          mpv: props,
+        });
+        diag('autotest vues', await invoke('mpv_debug_views').catch(() => null));
+      }
       diag('autotest perf', it.title, { ...(stats as object), lagAvgMs: Math.round(lag.sum / Math.max(1, lag.n)), lagMaxMs: Math.round(lag.max) });
       lag.sum = lag.n = lag.max = 0;
       diag('autotest bilan', it.title, {
@@ -114,8 +153,14 @@ export function SelfTest({ items }: { items: SelfTestItem[] }) {
   const spec: PlaySpec | null = it ? { key: `selftest-${i}`, title: it.title, urls: [it.url], live: it.live, tsOverride: it.tsOverride, forceEngine: it.forceEngine } : null;
   return (
     <div ref={box} style={{ width: '100%', height: '100%' }}>
-      {it?.mpv ? (
+      {it?.download ? (
+        <p style={{ padding: 20 }}>Téléchargement en cours…</p>
+      ) : it?.mpv ? (
         <div style={{ padding: 20, color: '#fff', background: 'rgba(200,0,0,.5)', width: 260 }}>Calque web (doit apparaître au-dessus de la vidéo)</div>
+      ) : spec && it.rect ? (
+        <div className="selftest-rect" style={{ position: 'absolute', ...it.rect }}>
+          <Player key={spec.key} spec={spec} mode="inline" />
+        </div>
       ) : spec ? (
         <Player key={spec.key} spec={spec} mode="inline" />
       ) : (

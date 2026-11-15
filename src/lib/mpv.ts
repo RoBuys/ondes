@@ -50,7 +50,9 @@ export const mpv = {
     invoke<void>('mpv_set', { name, value: typeof value === 'boolean' ? (value ? 'yes' : 'no') : String(value) }),
   get: (name: string) => invoke<string | null>('mpv_get', { name }),
   tracks: () => invoke<MpvTrack[]>('mpv_tracks'),
-  margins: (m: { left: number; right: number; top: number; bottom: number }) => invoke<void>('mpv_margins', m),
+  /** Places the picture under an element: its rectangle (CSS px) and the viewport size. */
+  margins: (m: { left: number; top: number; width: number; height: number; vw: number; vh: number }) =>
+    invoke<void>('mpv_margins', m),
   debugViews: () => invoke<string[]>('mpv_debug_views'),
   onProp: (fn: (name: string, value: unknown) => void) => subscribe(propSubs, fn),
   onEvent: (fn: (e: MpvEvent) => void) => subscribe(eventSubs, fn),

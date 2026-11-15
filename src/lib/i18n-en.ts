@@ -51,6 +51,7 @@ export const EN: Record<string, string> = {
   '{n} Mo': '{n} MB',
   '{n} Go': '{n} GB',
   'Fichier introuvable sur le disque': 'File not found on disk',
+  'Reconnexion ({n}/{max})…': 'Reconnecting ({n}/{max})…',
   // Download errors from the Rust side
   'Impossible de créer': 'Could not create',
   'Connexion impossible': 'Connection failed',
