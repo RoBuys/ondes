@@ -4,6 +4,7 @@
 [![Build](https://github.com/RoBuys/ondes/actions/workflows/build.yml/badge.svg?branch=main)](https://github.com/RoBuys/ondes/actions/workflows/build.yml)
 [![Downloads](https://img.shields.io/github/downloads/RoBuys/ondes/total)](https://github.com/RoBuys/ondes/releases)
 [![Last commit](https://img.shields.io/github/last-commit/RoBuys/ondes)](https://github.com/RoBuys/ondes/commits/main)
+[![License: MIT](https://img.shields.io/badge/license-MIT-green)](LICENSE)
 
 [![macOS Apple Silicon](https://img.shields.io/badge/macOS-Apple%20Silicon-000000?logo=apple&logoColor=white)](https://github.com/RoBuys/ondes/releases/latest)
 [![Windows](https://img.shields.io/badge/Windows-x64-0078D4?logo=windows&logoColor=white)](https://github.com/RoBuys/ondes/releases/latest)
@@ -100,3 +101,14 @@ scripts/        bundle-libmpv-macos.sh
   hardware extension, some AC-3/MKV or interlaced streams may not play). The *Copy address*
   button lets you open them in VLC.
 - No catch-up (replay) or recording yet.
+
+## License
+
+Ondes' source code is released under the [MIT License](LICENSE).
+
+The macOS app bundles third-party libraries with their own licenses, notably **mpv** (GPL-2.0-or-later /
+LGPL-2.1-or-later) and **FFmpeg** (GPL-3.0-or-later, built with x264 and x265, GPL-2.0-or-later), copied from Homebrew
+by `scripts/bundle-libmpv-macos.sh`. The macOS binaries are therefore distributed under the terms of the GPL; the
+sources of these components are available from their projects ([mpv](https://github.com/mpv-player/mpv),
+[FFmpeg](https://ffmpeg.org), [x264](https://code.videolan.org/videolan/x264),
+[x265](https://bitbucket.org/multicoreware/x265_git)) and from [Homebrew](https://github.com/Homebrew/homebrew-core).
