@@ -1,5 +1,18 @@
 # Ondes — stream player for macOS (Apple Silicon) and Windows
 
+[![Latest release](https://img.shields.io/github/v/release/RoBuys/ondes?label=release)](https://github.com/RoBuys/ondes/releases/latest)
+[![Build](https://github.com/RoBuys/ondes/actions/workflows/build.yml/badge.svg?branch=main)](https://github.com/RoBuys/ondes/actions/workflows/build.yml)
+[![Downloads](https://img.shields.io/github/downloads/RoBuys/ondes/total)](https://github.com/RoBuys/ondes/releases)
+[![Last commit](https://img.shields.io/github/last-commit/RoBuys/ondes)](https://github.com/RoBuys/ondes/commits/main)
+
+[![macOS Apple Silicon](https://img.shields.io/badge/macOS-Apple%20Silicon-000000?logo=apple&logoColor=white)](https://github.com/RoBuys/ondes/releases/latest)
+[![Windows](https://img.shields.io/badge/Windows-x64-0078D4?logo=windows&logoColor=white)](https://github.com/RoBuys/ondes/releases/latest)
+[![Tauri 2](https://img.shields.io/badge/Tauri-2-24C8DB?logo=tauri&logoColor=white)](https://tauri.app)
+[![React](https://img.shields.io/badge/React-19-61DAFB?logo=react&logoColor=black)](https://react.dev)
+[![Rust](https://img.shields.io/badge/Rust-stable-000000?logo=rust&logoColor=white)](https://www.rust-lang.org)
+[![mpv](https://img.shields.io/badge/playback-mpv-691F69?logo=mpv&logoColor=white)](https://mpv.io)
+[![Languages](https://img.shields.io/badge/UI-English%20%7C%20Fran%C3%A7ais-informational)](#translations)
+
 Desktop app (Tauri 2 + React) to watch your stream sources. The interface is available in **English and French**
 (follows the system language; *Settings → Language* to switch). Menu names are given below in English.
 
