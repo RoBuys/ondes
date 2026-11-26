@@ -18,6 +18,11 @@ function apiUrl(s: Source, action?: string, extra = '') {
 
 const asArray = (x: any): any[] => (Array.isArray(x) ? x : x && typeof x === 'object' ? Object.values(x) : []);
 const str = (x: any) => (x == null ? '' : String(x)).trim();
+/** Unix timestamp in seconds (number or string) → ms; undefined when missing or implausible. */
+const unixMs = (v: any) => {
+  const n = Number(v);
+  return n > 946684800 && n < 4102444800 ? n * 1000 : undefined;
+};
 const yearOf = (...c: any[]) => {
   for (const v of c) {
     const m = /\b(19|20)\d{2}\b/.exec(str(v));
@@ -87,6 +92,7 @@ export async function loadXtream(s: Source): Promise<Catalog> {
       vodId: Number(x.stream_id),
       rating: str(x.rating) && str(x.rating) !== '0' ? str(x.rating) : undefined,
       year: yearOf(x.year, x.releasedate, x.name),
+      added: unixMs(x.added),
     }));
 
   const S = categories(sc);
@@ -102,6 +108,7 @@ export async function loadXtream(s: Source): Promise<Catalog> {
       plot: str(x.plot) || undefined,
       rating: str(x.rating) && str(x.rating) !== '0' ? str(x.rating) : undefined,
       year: yearOf(x.releaseDate, x.release_date, x.year, x.name),
+      added: unixMs(x.last_modified),
     }));
 
   const ui = login.user_info;

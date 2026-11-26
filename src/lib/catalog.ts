@@ -95,3 +95,21 @@ export async function loadEpg(url: string, cat: Catalog): Promise<Epg> {
   const now = Date.now();
   return parseXmltv(text, cat.live, now - 12 * 3600_000, now + 4 * 86400_000);
 }
+
+/**
+ * Dates the movies and series that appeared since the previous catalog (`seenAt`), so that "Recently added"
+ * also works for sources without dates (M3U). Titles already known keep their date; on a source's first load
+ * nothing is "new" (seenAt = 0), otherwise everything would look recent.
+ */
+export function markNewTitles(fresh: Catalog, previous: Catalog | null | undefined, now = Date.now()): Catalog {
+  const seen = new Map<string, number>();
+  for (const it of [...(previous?.movies ?? []), ...(previous?.series ?? [])]) seen.set(it.id, it.seenAt ?? 0);
+  const mark = <T extends { id: string; seenAt?: number }>(it: T): T => ({ ...it, seenAt: seen.get(it.id) ?? (previous ? now : 0) });
+  return { ...fresh, movies: fresh.movies.map(mark), series: fresh.series.map(mark) };
+}
+
+/** How long a title stays in "Recently added". */
+export const RECENT_DAYS = 30;
+
+/** Date used for "Recently added": the provider's date when given, otherwise when Ondes first saw the title. */
+export const addedDate = (it: { added?: number; seenAt?: number }) => it.added ?? it.seenAt ?? 0;

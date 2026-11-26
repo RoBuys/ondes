@@ -22,7 +22,8 @@ Desktop app (Tauri 2 + React) to watch your stream sources. The interface is ava
 - **Guide**: 12-hour XMLTV grid (3-hour steps), detected from the playlist (`x-tvg-url`) or Xtream, or entered
   manually. `.xml.gz` files are supported.
 - **Movies & series**: Xtream catalogs (detail pages, seasons, episodes) or M3U VOD, resume
-  playback, automatic next episode.
+  playback, automatic next episode, and a *Recently added* category (provider dates for Xtream, otherwise titles
+  that appeared since the previous refresh).
 - **Playback (macOS)**: bundled **mpv** engine — deinterlaced broadcast TV (1080i), AC-3, HEVC, audio and subtitle
   tracks (DVB included), full screen. *Settings → Playback engine* switches back to
   the web player.

@@ -1,5 +1,6 @@
 import { useEffect, useMemo, useState } from 'react';
 import { useApp } from '../context';
+import { addedDate, RECENT_DAYS } from '../lib/catalog';
 import { downloadsAvailable, localSrc } from '../lib/downloads';
 import { mediaSrc } from '../lib/net';
 import { getPosition, getPositions } from '../lib/store';
@@ -14,6 +15,13 @@ const FAV = '__fav';
 const ALL = '__all';
 const CONT = '__cont';
 const PAGE = 120;
+const RECENT = '__recent';
+
+/** Titles added in the last RECENT_DAYS days, newest first. */
+function recentItems<T extends Item>(items: T[]): T[] {
+  const since = Date.now() - RECENT_DAYS * 86400_000;
+  return items.filter((m) => addedDate(m) > since).sort((a, b) => addedDate(b) - addedDate(a));
+}
 
 type Item = Movie | Show;
 
@@ -26,6 +34,8 @@ function useGroups<T extends Item>(items: T[], favs: Set<string>, contIds: Set<s
       const n = items.reduce((k, m) => k + (contIds.has(m.id) ? 1 : 0), 0);
       if (n) out.push({ id: CONT, label: t("Continuer"), count: n, icon: 'play' });
     }
+    const recent = recentItems(items).length;
+    if (recent) out.push({ id: RECENT, label: t('Ajoutés récemment'), count: recent, icon: 'clock' });
     out.push(
       { id: FAV, label: t("Favoris"), count: items.reduce((k, m) => k + (favs.has(m.id) ? 1 : 0), 0), icon: 'star' },
       { id: ALL, label: t("Tout"), count: items.length, icon: 'film' },
@@ -57,6 +67,7 @@ function Browser<T extends Item>({
     if (s) return items.filter((m) => s(m.name));
     if (group === FAV) return items.filter((m) => favs.has(m.id));
     if (group === CONT && contIds) return items.filter((m) => contIds.has(m.id));
+    if (group === RECENT) return recentItems(items);
     if (group === ALL) return items;
     return items.filter((m) => m.group === group);
   }, [items, group, q, favs, contIds]);

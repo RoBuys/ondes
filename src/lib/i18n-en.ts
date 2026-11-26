@@ -258,6 +258,7 @@ export const EN: Record<string, string> = {
 
   // Movies and series
   Continuer: 'Continue watching',
+  'Ajoutés récemment': 'Recently added',
   Tout: 'All',
   'Aucun film': 'No movies',
   'Aucune série': 'No series',

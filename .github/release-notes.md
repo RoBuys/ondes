@@ -8,6 +8,7 @@
 - **Live**: groups, search, favorites, keyboard zapping (↑ ↓), current and upcoming programme
 - XMLTV **programme guide** (detected automatically or entered manually, `.xml.gz` supported)
 - **Movies and series**: detail pages, seasons, resume playback, automatic next episode
+- **Recently added** category for movies and series: provider dates (Xtream), or titles that appeared since the previous refresh (M3U)
 - **Smart reconnection** when a stream drops or freezes
 - **Favorites** for channels, movies and series (star on posters), gathered in a Favorites tab
 - Personal **channel lists** ("Sport", "News"…), in Live and Guide

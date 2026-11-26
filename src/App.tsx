@@ -13,7 +13,7 @@ import { Ctx, useApp, type AppCtx, type EpgStatus, type PendingOpen, type Status
 import { applyRules, loadRules, saveRules, type ContentRules, type Kind } from './lib/content';
 import { downloadsAvailable, useDownloads } from './lib/downloads';
 import { loadLists, saveLists, type ChannelList } from './lib/lists';
-import { epgUrlFor, loadCatalog, loadEpg } from './lib/catalog';
+import { epgUrlFor, loadCatalog, loadEpg, markNewTitles } from './lib/catalog';
 import { db, prefs } from './lib/store';
 import type { Catalog, Epg, PlaySpec, Section, Settings, Source } from './lib/types';
 import { cx, errMsg, fmtCount, uid } from './lib/util';
@@ -125,7 +125,8 @@ export default function App() {
           setStatus({ loading: true, message: t("Mise à jour de la playlist…") });
         }
       }
-      const fresh = await loadCatalog(src);
+      const previous = catalogRef.current?.sourceId === src.id ? catalogRef.current : await db.catalog(src.id);
+      const fresh = markNewTitles(await loadCatalog(src), previous);
       if (seq !== loadSeq.current) return;
       setCatalog(fresh);
       setStatus({ loading: false });

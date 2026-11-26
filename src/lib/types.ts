@@ -44,6 +44,10 @@ export interface Movie {
   vodId?: number;
   rating?: string;
   year?: string;
+  /** Date added by the provider (ms), when it gives one (Xtream: "added" for movies, "last_modified" for series) */
+  added?: number;
+  /** When Ondes first saw this title at a refresh (ms); 0 for titles present at the source's first load */
+  seenAt?: number;
 }
 
 export interface Episode {
@@ -66,6 +70,10 @@ export interface Show {
   plot?: string;
   rating?: string;
   year?: string;
+  /** Date added by the provider (ms), when it gives one (Xtream: "added" for movies, "last_modified" for series) */
+  added?: number;
+  /** When Ondes first saw this title at a refresh (ms); 0 for titles present at the source's first load */
+  seenAt?: number;
   /** Present for series coming from an M3U playlist */
   episodes?: Episode[];
 }
